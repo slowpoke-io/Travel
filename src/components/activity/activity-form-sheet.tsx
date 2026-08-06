@@ -6,6 +6,12 @@ import { toast } from 'sonner'
 
 import { PlaceSearch, type PlaceResult } from '@/components/map/place-search'
 import { TagPicker } from '@/components/activity/tag-picker'
+import {
+  PendingImagePicker,
+  resolvePendingRoles,
+  type PendingImage,
+} from '@/components/image/pending-image-picker'
+import { useImageUpload } from '@/lib/use-image-upload'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -144,14 +150,20 @@ function ActivityFormBody({
   onSaved,
 }: Omit<Props, 'open'>) {
   const mutations = useTripMutations()
+  const { upload, progress } = useImageUpload()
   const [pending, startTransition] = useTransition()
   const [form, setForm] = useState<FormState>(() =>
     activity ? fromActivity(activity) : emptyState(),
   )
   const [localTags, setLocalTags] = useState<TagRow[]>(tags)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
 
   const isEdit = Boolean(activity)
+  const hasExistingCover = Boolean(
+    activity?.images.some((i) => i.role === 'cover'),
+  )
+  const busy = pending || progress.uploading
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -215,6 +227,25 @@ function ActivityFormBody({
         })
         return
       }
+
+      // 圖片要等行程存在之後才能上傳（images 的外鍵指向 activity）。
+      // 先前只留住 File，到這裡才真正壓縮並直傳，中途取消就不會產生孤兒檔案。
+      if (pendingImages.length) {
+        const activityId =
+          activity?.id ?? (typeof result.data === 'string' ? result.data : null)
+
+        if (activityId) {
+          await upload(
+            pendingImages.map((p) => p.file),
+            {
+              activityId,
+              role: 'info',
+              roles: resolvePendingRoles(pendingImages.length, hasExistingCover),
+            },
+          )
+        }
+      }
+
       toast.success(isEdit ? '已儲存' : '已新增行程')
       onOpenChange(false)
       onSaved?.()
@@ -436,6 +467,15 @@ function ActivityFormBody({
             </div>
 
             <div className="space-y-2">
+              <Label>圖片</Label>
+              <PendingImagePicker
+                images={pendingImages}
+                onChange={setPendingImages}
+                hasExistingCover={hasExistingCover}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="act-notes">備註</Label>
               <Textarea
                 id="act-notes"
@@ -453,13 +493,17 @@ function ActivityFormBody({
         <Button
           type="submit"
           size="lg"
-          disabled={pending}
+          disabled={busy}
           className="h-12 w-full text-base"
         >
-          {pending ? (
+          {busy ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : null}
-          {isEdit ? '儲存' : '新增'}
+          {progress.uploading
+            ? `上傳圖片 ${progress.done}/${progress.total}`
+            : isEdit
+              ? '儲存'
+              : '新增'}
         </Button>
       </div>
     </form>

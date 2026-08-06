@@ -39,7 +39,18 @@ export function useImageUpload() {
   const upload = useCallback(
     async (
       files: File[],
-      options: { activityId: string | null; role: ImageRole },
+      options: {
+        activityId: string | null
+        /** 所有圖片的預設用途 */
+        role: ImageRole
+        /**
+         * 逐張指定用途，索引對應 files。沒指定的沿用 role。
+         *
+         * 需要這個是因為資料庫的 partial unique index 只允許一張封面 ——
+         * 一次上傳多張時不能全部標成 cover，否則第二張就會違反約束。
+         */
+        roles?: ImageRole[]
+      },
     ): Promise<boolean> => {
       const valid = files.filter(isSupportedImage).slice(0, MAX_FILES)
       if (valid.length === 0) {
@@ -89,7 +100,7 @@ export function useImageUpload() {
           committed.push({
             path: slot.path,
             thumbPath: slot.thumbPath,
-            role: options.role,
+            role: options.roles?.[i] ?? options.role,
             width: prepared.width,
             height: prepared.height,
             bytes: prepared.bytes,

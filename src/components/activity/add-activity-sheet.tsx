@@ -2,10 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { Inbox, Loader2, PencilLine, Search } from 'lucide-react'
+import { Inbox, Loader2, PencilLine } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -17,16 +16,20 @@ import {
 } from '@/components/ui/drawer'
 import { categoryMeta } from '@/lib/constants'
 import type { ActivityWithRelations } from '@/lib/queries'
-import type { TagRow } from '@/lib/supabase/database.types'
 import { useTripMutations } from '@/lib/use-trip-mutations'
 
 type Mode = 'menu' | 'backlog'
 
 /**
- * 新增行程的入口。三條路徑：
- *   1. 搜尋地點 — 直接開表單，游標落在地點搜尋
- *   2. 手動輸入 — 開表單
- *   3. 從儲備區挑 — 多選後一次加入當天
+ * 「新增行程」的選單。
+ *
+ * 只有兩件真正不同的事：「建一個新的」與「從儲備區撈既有的」。
+ * 表單裡本來就同時提供地點搜尋與手動輸入，把它們拆成兩個選項是多餘的
+ * ——那兩個選項會開出一模一樣的畫面。
+ *
+ * 建立新行程的表單由呼叫端持有（透過 onCreateNew 觸發）。這樣一來，
+ * 儲備區是空的時候呼叫端可以直接開表單、根本不顯示這個選單，
+ * 而不需要在這裡於 render 期間去改父層的狀態。
  */
 export function AddActivitySheet({
   open,
@@ -34,21 +37,20 @@ export function AddActivitySheet({
   dayId,
   dayLabel,
   backlogActivities,
-  tags,
   mapsEnabled,
+  onCreateNew,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   dayId: string
   dayLabel: string
   backlogActivities: ActivityWithRelations[]
-  tags: TagRow[]
   mapsEnabled: boolean
+  onCreateNew: () => void
 }) {
   const router = useRouter()
   const mutations = useTripMutations()
   const [mode, setMode] = useState<Mode>('menu')
-  const [formOpen, setFormOpen] = useState(false)
   const [picked, setPicked] = useState<string[]>([])
   const [pending, startTransition] = useTransition()
 
@@ -59,7 +61,7 @@ export function AddActivitySheet({
 
   function openForm() {
     onOpenChange(false)
-    setFormOpen(true)
+    onCreateNew()
   }
 
   function addFromBacklog() {
@@ -94,29 +96,20 @@ export function AddActivitySheet({
               </DrawerHeader>
 
               <div className="space-y-2 px-4 pb-6">
-                {mapsEnabled ? (
-                  <MenuButton
-                    icon={Search}
-                    title="搜尋地點"
-                    hint="自動帶入名稱、地址與座標"
-                    onClick={openForm}
-                  />
-                ) : null}
                 <MenuButton
                   icon={PencilLine}
-                  title="手動輸入"
-                  hint="自己填標題與備註"
+                  title="建立新行程"
+                  hint={
+                    mapsEnabled
+                      ? '搜尋地點自動帶入座標，或自己輸入'
+                      : '輸入名稱、時間與備註'
+                  }
                   onClick={openForm}
                 />
                 <MenuButton
                   icon={Inbox}
                   title="從儲備區挑選"
-                  hint={
-                    backlogActivities.length
-                      ? `儲備區有 ${backlogActivities.length} 個想去的地方`
-                      : '儲備區目前是空的'
-                  }
-                  disabled={backlogActivities.length === 0}
+                  hint={`儲備區有 ${backlogActivities.length} 個想去的地方`}
                   onClick={() => setMode('backlog')}
                 />
               </div>
@@ -192,15 +185,6 @@ export function AddActivitySheet({
           )}
         </DrawerContent>
       </Drawer>
-
-      <ActivityFormSheet
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        dayId={dayId}
-        tags={tags}
-        mapsEnabled={mapsEnabled}
-        onSaved={() => router.refresh()}
-      />
     </>
   )
 }

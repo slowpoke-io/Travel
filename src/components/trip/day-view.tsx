@@ -55,6 +55,7 @@ export function DayView({
   const [mapOpen, setMapOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<ActivityWithRelations | null>(null)
   const [moving, setMoving] = useState<ActivityWithRelations | null>(null)
   const [imageTarget, setImageTarget] = useState<string | null>(null)
@@ -79,6 +80,15 @@ export function DayView({
   )
 
   const isFiltered = filters.categories.length > 0 || filters.tagIds.length > 0
+
+  /**
+   * 儲備區是空的時候，選單只剩「建立新行程」一個有意義的選項，
+   * 直接開表單，少一次無意義的點擊。
+   */
+  function startAdding() {
+    if (backlogActivities.length > 0) setAddOpen(true)
+    else setCreateOpen(true)
+  }
 
   return (
     <>
@@ -147,7 +157,7 @@ export function DayView({
           <EmptyDay
             filtered={isFiltered}
             canEdit={canEdit}
-            onAdd={() => setAddOpen(true)}
+            onAdd={startAdding}
           />
         ) : (
           visible.map((activity) => (
@@ -175,7 +185,7 @@ export function DayView({
         <div className="pointer-events-none fixed inset-x-0 bottom-14 z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
           <Button
             size="lg"
-            onClick={() => setAddOpen(true)}
+            onClick={startAdding}
             className="pointer-events-auto h-13 gap-2 rounded-full pr-6 pl-5 shadow-lg"
           >
             <Plus className="size-5" aria-hidden />
@@ -190,10 +200,21 @@ export function DayView({
         dayId={currentDay.id}
         dayLabel={`Day ${currentDay.day_index}`}
         backlogActivities={backlogActivities}
-        tags={tags}
         mapsEnabled={mapsEnabled}
+        onCreateNew={() => setCreateOpen(true)}
       />
 
+      {/* 建立新行程 */}
+      <ActivityFormSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        dayId={currentDay.id}
+        tags={tags}
+        mapsEnabled={mapsEnabled}
+        onSaved={() => router.refresh()}
+      />
+
+      {/* 編輯既有行程 */}
       <ActivityFormSheet
         open={Boolean(editing)}
         onOpenChange={(open) => !open && setEditing(null)}
@@ -201,6 +222,7 @@ export function DayView({
         activity={editing}
         tags={tags}
         mapsEnabled={mapsEnabled}
+        onSaved={() => router.refresh()}
       />
 
       <MoveToSheet
