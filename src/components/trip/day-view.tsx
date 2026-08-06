@@ -1,0 +1,270 @@
+'use client'
+
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import { ArrowUpDown, ChevronDown, ChevronUp, MapIcon, Plus } from 'lucide-react'
+
+import { ActivityCard } from '@/components/activity/activity-card'
+import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
+import { AddActivitySheet } from '@/components/activity/add-activity-sheet'
+import { DaySortSheet } from '@/components/activity/day-sort-sheet'
+import {
+  applyFilters,
+  FilterBar,
+  parseFilters,
+} from '@/components/activity/filter-bar'
+import { MoveToSheet } from '@/components/activity/move-to-sheet'
+import { AddImageSheet } from '@/components/image/add-image-sheet'
+import { ActivityMap, toMappedActivities } from '@/components/map/activity-map'
+import { DayTabs } from '@/components/trip/day-tabs'
+import { useTripAccess } from '@/components/trip/trip-access'
+import { Button } from '@/components/ui/button'
+import { dayColor } from '@/lib/constants'
+import { formatFullDate } from '@/lib/format'
+import type { ActivityWithRelations } from '@/lib/queries'
+import type {
+  ActivityCategory,
+  TagRow,
+  TripDayRow,
+} from '@/lib/supabase/database.types'
+
+type Props = {
+  days: TripDayRow[]
+  currentDay: TripDayRow
+  /** 當天的行程，已依 position 排序 */
+  dayActivities: ActivityWithRelations[]
+  backlogActivities: ActivityWithRelations[]
+  tags: TagRow[]
+  counts: Record<string, number>
+  mapsEnabled: boolean
+}
+
+export function DayView({
+  days,
+  currentDay,
+  dayActivities,
+  backlogActivities,
+  tags,
+  counts,
+  mapsEnabled,
+}: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { canEdit } = useTripAccess()
+
+  const [mapOpen, setMapOpen] = useState(false)
+  const [sortOpen, setSortOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [editing, setEditing] = useState<ActivityWithRelations | null>(null)
+  const [moving, setMoving] = useState<ActivityWithRelations | null>(null)
+  const [imageTarget, setImageTarget] = useState<string | null>(null)
+
+  const filters = useMemo(
+    () => parseFilters(new URLSearchParams(searchParams.toString())),
+    [searchParams],
+  )
+  const visible = useMemo(
+    () => applyFilters(dayActivities, filters),
+    [dayActivities, filters],
+  )
+
+  const availableCategories = useMemo(
+    () => new Set(dayActivities.map((a) => a.category as ActivityCategory)),
+    [dayActivities],
+  )
+
+  const mapPoints = useMemo(
+    () => toMappedActivities(dayActivities, dayColor(currentDay.day_index)),
+    [dayActivities, currentDay.day_index],
+  )
+
+  const isFiltered = filters.categories.length > 0 || filters.tagIds.length > 0
+
+  return (
+    <>
+      <DayTabs
+        days={days}
+        currentDayIndex={currentDay.day_index}
+        counts={counts}
+      />
+
+      {/* 可收合的地圖條：預設收合，點一下展開成半螢幕 */}
+      {mapsEnabled && mapPoints.length > 0 ? (
+        <div className="border-b">
+          <ActivityMap
+            points={mapPoints}
+            className={mapOpen ? 'h-[45dvh]' : 'h-28'}
+          />
+          <button
+            type="button"
+            onClick={() => setMapOpen((v) => !v)}
+            className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center justify-center gap-1 text-xs"
+          >
+            {mapOpen ? (
+              <>
+                <ChevronUp className="size-3.5" aria-hidden />
+                收合地圖
+              </>
+            ) : (
+              <>
+                <ChevronDown className="size-3.5" aria-hidden />
+                展開地圖（{mapPoints.length} 個地點）
+              </>
+            )}
+          </button>
+        </div>
+      ) : null}
+
+      <FilterBar tags={tags} availableCategories={availableCategories} />
+
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="min-w-0">
+          <h2 className="truncate font-semibold">
+            {currentDay.title ?? `Day ${currentDay.day_index}`}
+          </h2>
+          {currentDay.date ? (
+            <p className="text-muted-foreground text-xs">
+              {formatFullDate(currentDay.date)}
+            </p>
+          ) : null}
+        </div>
+
+        {canEdit && dayActivities.length > 1 ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSortOpen(true)}
+            className="shrink-0 gap-1.5"
+          >
+            <ArrowUpDown className="size-4" aria-hidden />
+            排序
+          </Button>
+        ) : null}
+      </div>
+
+      <main className="space-y-3 px-4 pb-40">
+        {visible.length === 0 ? (
+          <EmptyDay
+            filtered={isFiltered}
+            canEdit={canEdit}
+            onAdd={() => setAddOpen(true)}
+          />
+        ) : (
+          visible.map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              activity={activity}
+              tags={tags}
+              // 序號用未篩選前的位置，才會跟地圖標記對得上
+              order={dayActivities.indexOf(activity) + 1}
+              onEdit={() => setEditing(activity)}
+              onMove={() => setMoving(activity)}
+              onAddImage={() => setImageTarget(activity.id)}
+            />
+          ))
+        )}
+
+        {isFiltered && visible.length < dayActivities.length ? (
+          <p className="text-muted-foreground pt-2 text-center text-xs">
+            篩選中，隱藏了 {dayActivities.length - visible.length} 個行程
+          </p>
+        ) : null}
+      </main>
+
+      {canEdit ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-14 z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
+          <Button
+            size="lg"
+            onClick={() => setAddOpen(true)}
+            className="pointer-events-auto h-13 gap-2 rounded-full pr-6 pl-5 shadow-lg"
+          >
+            <Plus className="size-5" aria-hidden />
+            新增行程
+          </Button>
+        </div>
+      ) : null}
+
+      <AddActivitySheet
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        dayId={currentDay.id}
+        dayLabel={`Day ${currentDay.day_index}`}
+        backlogActivities={backlogActivities}
+        tags={tags}
+        mapsEnabled={mapsEnabled}
+      />
+
+      <ActivityFormSheet
+        open={Boolean(editing)}
+        onOpenChange={(open) => !open && setEditing(null)}
+        dayId={currentDay.id}
+        activity={editing}
+        tags={tags}
+        mapsEnabled={mapsEnabled}
+      />
+
+      <MoveToSheet
+        open={Boolean(moving)}
+        onOpenChange={(open) => !open && setMoving(null)}
+        activityIds={moving ? [moving.id] : []}
+        days={days}
+        currentDayId={currentDay.id}
+        counts={counts}
+        backlogCount={backlogActivities.length}
+      />
+
+      <DaySortSheet
+        open={sortOpen}
+        onOpenChange={(open) => {
+          setSortOpen(open)
+          if (!open) router.refresh()
+        }}
+        dayId={currentDay.id}
+        dayLabel={`Day ${currentDay.day_index}`}
+        dayActivities={dayActivities}
+        backlogActivities={backlogActivities}
+      />
+
+      <AddImageSheet
+        activityId={imageTarget}
+        open={Boolean(imageTarget)}
+        onOpenChange={(open) => !open && setImageTarget(null)}
+      />
+    </>
+  )
+}
+
+function EmptyDay({
+  filtered,
+  canEdit,
+  onAdd,
+}: {
+  filtered: boolean
+  canEdit: boolean
+  onAdd: () => void
+}) {
+  if (filtered) {
+    return (
+      <p className="text-muted-foreground py-16 text-center text-sm">
+        沒有符合篩選條件的行程
+      </p>
+    )
+  }
+  return (
+    <div className="flex flex-col items-center py-16 text-center">
+      <div className="bg-muted flex size-14 items-center justify-center rounded-full">
+        <MapIcon className="text-muted-foreground size-6" aria-hidden />
+      </div>
+      <p className="mt-4 font-medium">這一天還沒有行程</p>
+      <p className="text-muted-foreground mt-1 max-w-[15rem] text-sm">
+        直接新增，或從儲備區把想去的地方挑進來。
+      </p>
+      {canEdit ? (
+        <Button onClick={onAdd} className="mt-5 gap-2">
+          <Plus className="size-4" aria-hidden />
+          新增行程
+        </Button>
+      ) : null}
+    </div>
+  )
+}

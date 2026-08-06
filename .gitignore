@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 但要保留範本
+!.env.example
+
+# Serwist 產生的 service worker
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
