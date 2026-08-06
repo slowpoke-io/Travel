@@ -36,9 +36,6 @@ export const publicEnv = {
   get googleMapsMapId() {
     return process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? ''
   },
-  get siteUrl() {
-    return process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
-  },
 }
 
 /** 地圖功能是否可用；未設定金鑰時 UI 會顯示提示而不是壞掉的地圖 */
