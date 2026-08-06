@@ -12,10 +12,14 @@ import { publicEnv } from '@/lib/env'
  * 導航與「在地圖開啟」是純外部網址，不需要載入 SDK。
  */
 
+/** script 載入完成後 Google 會呼叫的全域 callback 名稱 */
+const CALLBACK_NAME = '__initGooglePlaces'
+
 declare global {
   interface Window {
     /** Google Maps 在金鑰被拒時會呼叫這個全域函式 */
     gm_authFailure?: () => void
+    [CALLBACK_NAME]?: () => void
   }
 }
 
@@ -74,11 +78,44 @@ function loadScript(): Promise<void> {
       setState('rejected')
     }
 
+    /*
+     * 用 callback 而不是 script.onload：
+     *
+     * loading=async 時，onload 只代表「bootstrap 檔下載完了」，此時 API 還在
+     * 非同步載入子資源，google.maps.places 尚未就緒。Google 要求搭配 callback，
+     * 它會在真正可用之後才呼叫。
+     *
+     * 也不能用 google.maps.importLibrary —— 那是 inline bootstrap loader
+     * （(g=>{...})({key}) 那段程式碼）才會建立的函式，用一般 script 標籤
+     * 載入時它並不存在。改成在 URL 帶 libraries=places，載入後直接使用
+     * google.maps.places。
+     */
+    window[CALLBACK_NAME] = () => {
+      delete window[CALLBACK_NAME]
+      // gm_authFailure 可能先觸發，別覆寫掉它的結果
+      if (loadState === 'rejected') {
+        reject(new Error('AUTH_FAILURE'))
+        return
+      }
+      if (!google.maps?.places?.PlaceAutocompleteElement) {
+        console.error(
+          '[Google Maps] places 函式庫已載入，但找不到 PlaceAutocompleteElement。' +
+            '請確認 Places API (New) 已啟用。',
+        )
+        setState('rejected')
+        reject(new Error('PLACES_UNAVAILABLE'))
+        return
+      }
+      setState('ready')
+      resolve()
+    }
+
     const script = document.createElement('script')
     const params = new URLSearchParams({
       key,
       loading: 'async',
       libraries: 'places',
+      callback: CALLBACK_NAME,
       language: 'zh-TW',
       region: 'TW',
       v: 'weekly',
@@ -86,19 +123,8 @@ function loadScript(): Promise<void> {
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`
     script.async = true
 
-    script.onload = async () => {
-      try {
-        await google.maps.importLibrary('places')
-        // gm_authFailure 可能比 importLibrary 晚觸發，別覆寫掉它的結果
-        if (loadState !== 'rejected') setState('ready')
-        resolve()
-      } catch (e) {
-        console.error('[Google Maps] places 函式庫載入失敗', e)
-        setState('rejected')
-        reject(e)
-      }
-    }
     script.onerror = () => {
+      delete window[CALLBACK_NAME]
       setState('rejected')
       reject(new Error('SCRIPT_LOAD_FAILED'))
     }
