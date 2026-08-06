@@ -5,15 +5,21 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { publicEnv } from '@/lib/env'
 
 /**
- * 載入 Google Maps JS API 的 places 函式庫。
+ * 載入 Google Maps JS API。**全站唯一的載入入口。**
  *
- * 地圖顯示分別由 Leaflet（每日行程）與 Google（地圖分頁）負責，這裡只處理
- * 地點搜尋 —— 那是 Google 真正不可取代的部分（搜尋地點取得座標）。
- * 導航與「在地圖開啟」是純外部網址，不需要載入 SDK。
+ * Google 的 script 一頁只能載入一次，載第二次會警告
+ * 「You have included the Google Maps JavaScript API multiple times」，
+ * 而且行為不可預期。之前地圖分頁用 @vis.gl 的 APIProvider、地點搜尋用
+ * 這裡，兩套各自載入 —— 先開地圖分頁（載入不含 places 的版本）再開
+ * 搜尋，這裡就會因為找不到 google.maps.places 而再插一個 script。
+ *
+ * 現在一律走這裡，一次把兩個需要的函式庫都帶進來：
+ *   places — 地點搜尋（取得座標）
+ *   marker — 地圖分頁的 AdvancedMarker（有編號的標記）
  */
 
 /** script 載入完成後 Google 會呼叫的全域 callback 名稱 */
-const CALLBACK_NAME = '__initGooglePlaces'
+const CALLBACK_NAME = '__initGoogleMaps'
 
 declare global {
   interface Window {
@@ -23,7 +29,7 @@ declare global {
   }
 }
 
-export type PlacesLoadState =
+export type MapsLoadState =
   | 'idle'
   | 'loading'
   | 'ready'
@@ -33,11 +39,11 @@ export type PlacesLoadState =
   | 'rejected'
 
 // 模組層級的共享狀態：同一頁可能有多個搜尋框，script 只能載入一次
-let loadState: PlacesLoadState = 'idle'
+let loadState: MapsLoadState = 'idle'
 let loadPromise: Promise<void> | null = null
 const subscribers = new Set<() => void>()
 
-function setState(next: PlacesLoadState) {
+function setState(next: MapsLoadState) {
   loadState = next
   for (const notify of subscribers) notify()
 }
@@ -53,10 +59,31 @@ function loadScript(): Promise<void> {
       return
     }
 
-    // 已經載入過（例如從 bfcache 回來）
+    // 已經載入完成（例如從 bfcache 回來，或另一個模組實例先載好了）
     if (typeof google !== 'undefined' && google.maps?.places) {
       setState('ready')
       resolve()
+      return
+    }
+
+    /*
+      DOM 層級的保險。模組層級的 loadPromise 只在同一個模組實例內有效，
+      而打包工具有可能把這個模組放進多個 chunk。真的發生時就會插入第二個
+      script，Google 會警告「included multiple times」且行為不可預期。
+      這裡直接看 document 有沒有既有的 script，有的話就等它。
+    */
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-google-maps-loader]',
+    )
+    if (existing) {
+      existing.addEventListener('load', () => {
+        if (loadState !== 'rejected') setState('ready')
+        resolve()
+      })
+      existing.addEventListener('error', () => {
+        setState('rejected')
+        reject(new Error('SCRIPT_LOAD_FAILED'))
+      })
       return
     }
 
@@ -99,7 +126,7 @@ function loadScript(): Promise<void> {
       }
       if (!google.maps?.places?.PlaceAutocompleteElement) {
         console.error(
-          '[Google Maps] places 函式庫已載入，但找不到 PlaceAutocompleteElement。' +
+          '[Google Maps] script 已載入，但找不到 PlaceAutocompleteElement。' +
             '請確認 Places API (New) 已啟用。',
         )
         setState('rejected')
@@ -114,7 +141,8 @@ function loadScript(): Promise<void> {
     const params = new URLSearchParams({
       key,
       loading: 'async',
-      libraries: 'places',
+      // 一次載齊，避免之後為了缺某個函式庫而再載一次
+      libraries: 'places,marker',
       callback: CALLBACK_NAME,
       language: 'zh-TW',
       region: 'TW',
@@ -122,6 +150,8 @@ function loadScript(): Promise<void> {
     })
     script.src = `https://maps.googleapis.com/maps/api/js?${params}`
     script.async = true
+    // 供上面的 DOM 層級檢查辨識
+    script.dataset.googleMapsLoader = 'true'
 
     script.onerror = () => {
       delete window[CALLBACK_NAME]
@@ -144,7 +174,7 @@ function subscribe(notify: () => void) {
 
 const getSnapshot = () => loadState
 // SSR 時永遠是尚未載入；script 只可能在瀏覽器端存在
-const getServerSnapshot = (): PlacesLoadState => 'idle'
+const getServerSnapshot = (): MapsLoadState => 'idle'
 
 /**
  * 回傳 places 函式庫的載入狀態。
@@ -153,7 +183,7 @@ const getServerSnapshot = (): PlacesLoadState => 'idle'
  * 外部狀態（多個搜尋框共用一份），這正是這個 hook 的用途，也避免了
  * 在 effect 裡 setState 造成的串連渲染。
  */
-export function useGooglePlaces(enabled: boolean): PlacesLoadState {
+export function useGoogleMaps(enabled: boolean): MapsLoadState {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   useEffect(() => {

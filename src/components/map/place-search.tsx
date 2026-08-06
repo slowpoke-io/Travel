@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { Search, TriangleAlert } from 'lucide-react'
 
-import { useGooglePlaces } from '@/lib/use-google-places'
+import { useGoogleMaps } from '@/lib/use-google-maps'
 
 export type PlaceResult = {
   placeName: string
@@ -31,7 +31,7 @@ export function PlaceSearch({
   enabled: boolean
   placeholder?: string
 }) {
-  const state = useGooglePlaces(enabled)
+  const state = useGoogleMaps(enabled)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // 用 ref 保存最新的 callback，避免 element 因為 callback 每次都是新函式而重建

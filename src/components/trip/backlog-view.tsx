@@ -1,9 +1,8 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
-import { CheckSquare, Inbox, Loader2, Plus, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { useMemo, useState } from 'react'
+import { CheckSquare, Inbox, Plus, X } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activity/activity-card'
 import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
@@ -23,11 +22,6 @@ import type {
   TagRow,
   TripDayRow,
 } from '@/lib/supabase/database.types'
-import { useTripMutations } from '@/lib/use-trip-mutations'
-import { cn } from '@/lib/utils'
-
-/** 快速指派列最多顯示幾個日期 chip，超過的收進「更多」 */
-const MAX_QUICK_DAYS = 5
 
 export function BacklogView({
   days,
@@ -45,8 +39,6 @@ export function BacklogView({
   const router = useRouter()
   const searchParams = useSearchParams()
   const { canEdit } = useTripAccess()
-  const mutations = useTripMutations()
-  const [pending, startTransition] = useTransition()
 
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<ActivityWithRelations | null>(null)
@@ -54,8 +46,6 @@ export function BacklogView({
   const [imageTarget, setImageTarget] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
-  /** 正在指派中的 `${activityId}:${dayId}`，讓被點的那顆 chip 自己顯示等待 */
-  const [assigning, setAssigning] = useState<string | null>(null)
 
   const filters = useMemo(
     () => parseFilters(new URLSearchParams(searchParams.toString())),
@@ -69,25 +59,6 @@ export function BacklogView({
     () => new Set(backlogActivities.map((a) => a.category as ActivityCategory)),
     [backlogActivities],
   )
-
-  function assign(activityIds: string[], dayId: string, label: string) {
-    setAssigning(`${activityIds[0]}:${dayId}`)
-    startTransition(async () => {
-      const result = await mutations.moveActivities(activityIds, dayId)
-      setAssigning(null)
-      if (!result.ok) {
-        toast.error('指派失敗', { description: result.error })
-        return
-      }
-      toast.success(`已移到 ${label}`)
-      setSelected([])
-      setSelectMode(false)
-      router.refresh()
-    })
-  }
-
-  const quickDays = days.slice(0, MAX_QUICK_DAYS)
-  const hasMoreDays = days.length > MAX_QUICK_DAYS
 
   return (
     <>
@@ -158,24 +129,6 @@ export function BacklogView({
                   onEdit={() => setEditing(activity)}
                   onMove={() => setMoving([activity.id])}
                   onAddImage={() => setImageTarget(activity.id)}
-                  quickAssign={
-                    canEdit && !selectMode ? (
-                      <QuickAssignRow
-                        days={quickDays}
-                        hasMore={hasMoreDays}
-                        disabled={pending}
-                        assigningDayId={
-                          assigning?.startsWith(`${activity.id}:`)
-                            ? assigning.split(':')[1]
-                            : null
-                        }
-                        onAssign={(day) =>
-                          assign([activity.id], day.id, `Day ${day.day_index}`)
-                        }
-                        onMore={() => setMoving([activity.id])}
-                      />
-                    ) : null
-                  }
                 />
               </div>
             </div>
@@ -190,15 +143,7 @@ export function BacklogView({
             <p className="flex-1 text-sm font-medium">
               已選 {selected.length} 個
             </p>
-            <Button
-              size="sm"
-              onClick={() => setMoving(selected)}
-              disabled={pending}
-              className="gap-1.5"
-            >
-              {pending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : null}
+            <Button size="sm" onClick={() => setMoving(selected)}>
               移動到…
             </Button>
           </div>
@@ -264,69 +209,6 @@ export function BacklogView({
         )}
       />
     </>
-  )
-}
-
-/**
- * 卡片下方的快速指派列。
- *
- * 這是「方便地移到不同天」的主要入口 —— 點一下 D2 就搬過去，
- * 不必開選單、不必拖曳。天數多時再用「更多」開完整清單。
- */
-function QuickAssignRow({
-  days,
-  hasMore,
-  disabled,
-  assigningDayId,
-  onAssign,
-  onMore,
-}: {
-  days: TripDayRow[]
-  hasMore: boolean
-  disabled: boolean
-  /** 正在指派到哪一天；那顆 chip 會顯示轉圈 */
-  assigningDayId: string | null
-  onAssign: (day: TripDayRow) => void
-  onMore: () => void
-}) {
-  return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-      <span className="text-muted-foreground mr-0.5 text-[11px]">加到</span>
-      {days.map((day) => {
-        const busy = assigningDayId === day.id
-        return (
-          <button
-            key={day.id}
-            type="button"
-            disabled={disabled}
-            onClick={() => onAssign(day)}
-            aria-busy={busy}
-            className={cn(
-              'bg-muted active:bg-primary active:text-primary-foreground inline-flex h-7 min-w-9 items-center justify-center rounded-full px-2 text-xs font-medium transition-colors',
-              // 只淡化沒被點的那些，被點的那顆保持清楚並顯示轉圈
-              disabled && !busy && 'opacity-40',
-              busy && 'bg-primary text-primary-foreground',
-            )}
-          >
-            {busy ? (
-              <Loader2 className="size-3 animate-spin" aria-hidden />
-            ) : (
-              `D${day.day_index}`
-            )}
-          </button>
-        )
-      })}
-      {hasMore ? (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onMore}
-          className="text-muted-foreground inline-flex h-7 items-center rounded-full border border-dashed px-2.5 text-xs disabled:opacity-50"
-        >
-          更多
-        </button>
-      ) : null}
-    </div>
   )
 }
 

@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
   ArrowLeft,
+  ChevronRight,
   Clock,
   ExternalLink,
+  Inbox,
   MapPin,
   Navigation,
   Pencil,
@@ -139,15 +141,46 @@ export function ActivityDetail({
               ))}
             </div>
 
+            {/*
+              原本是一行加了底線的文字，看起來像誤植的超連結。
+              改成正常的一列：左邊說明現在在哪，右邊是明確的動作。
+            */}
             {canEdit ? (
               <button
                 type="button"
                 onClick={() => setMoveOpen(true)}
-                className="text-muted-foreground hover:text-foreground mt-3 inline-flex items-center gap-1 text-xs underline underline-offset-4"
+                className="hover:bg-muted/60 active:bg-muted mt-4 flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
               >
-                目前在
-                {currentDay ? `：Day ${currentDay.day_index}` : '：行程儲備區'}
-                　移動到…
+                {currentDay ? (
+                  <span className="bg-muted flex size-9 shrink-0 flex-col items-center justify-center rounded-lg">
+                    <span className="text-[9px] leading-none opacity-70">
+                      DAY
+                    </span>
+                    <span className="text-sm leading-tight font-bold">
+                      {currentDay.day_index}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
+                    <Inbox className="size-4" aria-hidden />
+                  </span>
+                )}
+
+                <span className="min-w-0 flex-1">
+                  <span className="text-muted-foreground block text-[11px]">
+                    目前在
+                  </span>
+                  <span className="block truncate text-sm font-medium">
+                    {currentDay
+                      ? (currentDay.title ?? `第 ${currentDay.day_index} 天`)
+                      : '行程儲備區'}
+                  </span>
+                </span>
+
+                <span className="text-muted-foreground flex shrink-0 items-center gap-0.5 text-xs">
+                  移動
+                  <ChevronRight className="size-4" aria-hidden />
+                </span>
               </button>
             ) : null}
           </header>
