@@ -28,6 +28,11 @@ export const metadata: Metadata = {
     title: '旅程',
   },
   formatDetection: { telephone: false },
+  other: {
+    // Next 會自己輸出標準的 mobile-web-app-capable，但不會輸出 iOS 專用的這個。
+    // 少了它，從主畫面開啟時仍會帶著 Safari 的網址列，不是全螢幕的 App 樣子。
+    'apple-mobile-web-app-capable': 'yes',
+  },
 }
 
 export const viewport: Viewport = {
