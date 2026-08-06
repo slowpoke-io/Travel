@@ -16,13 +16,6 @@ import { Button } from '@/components/ui/button'
 import { FullScreenSheet } from '@/components/ui/full-screen-sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { CATEGORIES } from '@/lib/constants'
 import type { ActivityWithRelations } from '@/lib/queries'
@@ -30,11 +23,13 @@ import type { ActivityInput } from '@/lib/schemas'
 import type {
   ActivityCategory,
   ActivityLink,
+  ActivityTime,
   TagRow,
 } from '@/lib/supabase/database.types'
 import { useTripMutations } from '@/lib/use-trip-mutations'
 
-const DURATION_PRESETS = [30, 60, 90, 120, 180, 240]
+/** 常見的重要時間，點一下就帶入名稱，省得每次打字 */
+const TIME_LABEL_SUGGESTIONS = ['登機', '起飛', '抵達', '訂位', '入場', '集合']
 
 type Props = {
   open: boolean
@@ -51,10 +46,9 @@ type Props = {
 type FormState = {
   title: string
   category: ActivityCategory
-  startTime: string
-  duration: string
   notes: string
   links: ActivityLink[]
+  times: ActivityTime[]
   placeName: string
   address: string
   lat: number | null
@@ -67,10 +61,9 @@ function emptyState(): FormState {
   return {
     title: '',
     category: 'other',
-    startTime: '',
-    duration: '',
     notes: '',
     links: [],
+    times: [],
     placeName: '',
     address: '',
     lat: null,
@@ -84,10 +77,9 @@ function fromActivity(a: ActivityWithRelations): FormState {
   return {
     title: a.title,
     category: a.category,
-    startTime: a.start_time?.slice(0, 5) ?? '',
-    duration: a.duration_minutes?.toString() ?? '',
     notes: a.notes ?? '',
     links: a.links ?? [],
+    times: a.times ?? [],
     placeName: a.place_name ?? '',
     address: a.address ?? '',
     lat: a.lat,
@@ -191,10 +183,9 @@ function ActivityFormBody({
     const input: ActivityInput = {
       title: form.title.trim(),
       category: form.category,
-      start_time: form.startTime || null,
-      duration_minutes: form.duration ? Number(form.duration) : null,
       notes: form.notes.trim() || null,
       links: form.links.filter((l) => l.url.trim()),
+      times: form.times.filter((t) => t.time),
       place_name: form.placeName.trim() || null,
       address: form.address.trim() || null,
       lat: form.lat,
@@ -332,41 +323,97 @@ function ActivityFormBody({
               </div>
             </div>
 
-            {dayId ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="act-time">開始時間</Label>
-                  <Input
-                    id="act-time"
-                    type="time"
-                    value={form.startTime}
-                    onChange={(e) => set('startTime', e.target.value)}
-                    className="h-11 text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="act-duration">停留時間</Label>
-                  <Select
-                    value={form.duration || 'none'}
-                    onValueChange={(v) => set('duration', v === 'none' ? '' : v)}
-                  >
-                    <SelectTrigger id="act-duration" className="h-11 w-full">
-                      <SelectValue placeholder="未設定" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">未設定</SelectItem>
-                      {DURATION_PRESETS.map((m) => (
-                        <SelectItem key={m} value={String(m)}>
-                          {m >= 60
-                            ? `${Math.floor(m / 60)} 小時${m % 60 ? ` ${m % 60} 分` : ''}`
-                            : `${m} 分`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/*
+              重要時間。不是排時刻表，而是記下「你無法控制」的時間：
+              班機、訂位、時段票、末班車。所以做成可命名的清單而不是單一
+              欄位 —— 一個行程可能同時有起飛和抵達兩個時間。
+            */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>重要時間</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    set('times', [...form.times, { label: '', time: '' }])
+                  }
+                >
+                  <Plus className="size-4" aria-hidden />
+                  加一個
+                </Button>
               </div>
-            ) : null}
+
+              {form.times.length === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  班機、訂位、時段票、末班車…… 這些錯過會有代價的時間。
+                  一般行程不用填，靠順序就好。
+                </p>
+              ) : null}
+
+              {form.times.map((entry, index) => (
+                <div key={index} className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <Input
+                      value={entry.label}
+                      onChange={(e) => {
+                        const next = [...form.times]
+                        next[index] = { ...entry, label: e.target.value }
+                        set('times', next)
+                      }}
+                      placeholder="名稱"
+                      maxLength={20}
+                      className="h-10 w-24 shrink-0"
+                    />
+                    <Input
+                      type="time"
+                      value={entry.time}
+                      onChange={(e) => {
+                        const next = [...form.times]
+                        next[index] = { ...entry, time: e.target.value }
+                        set('times', next)
+                      }}
+                      className="h-10 text-base"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-10 shrink-0"
+                      aria-label="移除這個時間"
+                      onClick={() =>
+                        set(
+                          'times',
+                          form.times.filter((_, i) => i !== index),
+                        )
+                      }
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+
+                  {/* 名稱還沒填時給幾個常見的，點一下帶入 */}
+                  {!entry.label ? (
+                    <div className="flex flex-wrap gap-1 pl-0.5">
+                      {TIME_LABEL_SUGGESTIONS.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => {
+                            const next = [...form.times]
+                            next[index] = { ...entry, label }
+                            set('times', next)
+                          }}
+                          className="text-muted-foreground hover:text-foreground rounded-full border border-dashed px-2 py-0.5 text-[11px]"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
 
             <div className="space-y-2">
               <Label>標籤</Label>

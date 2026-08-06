@@ -128,6 +128,12 @@ scripts/cleanup-orphan-media.ts
 **排序不用 fractional index**，改成拖曳完成時把整個容器的 id 順序送給 `reorder_activities` RPC，
 `position` 直接等於陣列索引。單日行程量小（通常 < 20），這樣永遠不會出現順序漂移。
 
+**時間做成可命名的清單，而不是單一的 start_time。**
+每個行程都能填「開始時間」等於鼓勵使用者排一張不會遵守的時刻表 —— 早上遲了 40 分鐘，
+後面每一格就全錯，畫面上卻還顯示著錯的資訊。真正該記的是你「無法控制」的時間：
+班機、訂位、時段票、末班車。這些數量不固定又需要說明是什麼時間，所以用
+`times: [{label, time}]`，飛機的出發與抵達也就自然是同一個機制的兩筆。
+
 **封面用 `role` + partial unique index**，而不是在 `activities` 上放 `cover_image_id`。
 避免循環外鍵與懸空指標，換封面只要 update 一列。
 

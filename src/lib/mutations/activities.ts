@@ -23,10 +23,9 @@ function toRow(input: ActivityInput) {
   return {
     title: input.title,
     category: input.category,
-    start_time: input.start_time ? `${input.start_time}:00` : null,
-    duration_minutes: input.duration_minutes ?? null,
     notes: emptyToNull(input.notes),
     links: input.links ?? [],
+    times: input.times ?? [],
     place_name: emptyToNull(input.place_name),
     address: emptyToNull(input.address),
     lat: input.lat ?? null,

@@ -20,7 +20,7 @@ import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { categoryMeta, tagColorClass } from '@/lib/constants'
-import { formatDuration, formatTime } from '@/lib/format'
+
 import { getImageUrl, pickCover } from '@/lib/image-url'
 import type { ActivityWithRelations } from '@/lib/queries'
 import type { TagRow, TripDayRow } from '@/lib/supabase/database.types'
@@ -115,17 +115,16 @@ export function ActivityDetail({
                 {meta.label}
               </span>
 
-              {activity.start_time ? (
-                <Badge variant="secondary" className="gap-1">
+              {activity.times.map((t, i) => (
+                <Badge
+                  key={i}
+                  className="gap-1 bg-amber-100 text-amber-900 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200"
+                >
                   <Clock className="size-3" aria-hidden />
-                  {formatTime(activity.start_time)}
+                  {t.label ? `${t.label} ` : ''}
+                  {t.time}
                 </Badge>
-              ) : null}
-              {activity.duration_minutes ? (
-                <Badge variant="secondary">
-                  停留 {formatDuration(activity.duration_minutes)}
-                </Badge>
-              ) : null}
+              ))}
 
               {activityTags.map((tag) => (
                 <Badge

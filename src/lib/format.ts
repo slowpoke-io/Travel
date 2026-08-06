@@ -30,32 +30,6 @@ export function formatDateRange(
   return `${format(s, 'yyyy/MM/dd')} – ${format(e, 'yyyy/MM/dd')}`
 }
 
-/** '09:30:00' → '09:30' */
-export function formatTime(time: string | null): string {
-  if (!time) return ''
-  return time.slice(0, 5)
-}
-
-/** 90 → '1 小時 30 分' */
-export function formatDuration(minutes: number | null): string {
-  if (!minutes) return ''
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h === 0) return `${m} 分`
-  if (m === 0) return `${h} 小時`
-  return `${h} 小時 ${m} 分`
-}
-
-/** 精簡版，給卡片徽章用：90 → '1h30' */
-export function formatDurationShort(minutes: number | null): string {
-  if (!minutes) return ''
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (h === 0) return `${m}分`
-  if (m === 0) return `${h}h`
-  return `${h}h${m}`
-}
-
 export type TripPhase = 'ongoing' | 'upcoming' | 'past' | 'undated'
 
 export function tripPhase(trip: TripRow, today = new Date()): TripPhase {

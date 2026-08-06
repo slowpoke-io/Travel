@@ -16,23 +16,18 @@ export const linkSchema = z.object({
   url: z.string().trim().url('請輸入有效的網址').max(2000),
 })
 
+/** 重要時間：班機、訂位、時段票、末班車…… */
+export const activityTimeSchema = z.object({
+  label: trimmed(20),
+  time: z.string().regex(/^\d{2}:\d{2}$/, '時間格式應為 HH:MM'),
+})
+
 export const activityInputSchema = z.object({
   title: trimmed(200).min(1, '請輸入行程名稱'),
   category: z.enum(CATEGORY_VALUES).default('other'),
-  start_time: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, '時間格式應為 HH:MM')
-    .nullable()
-    .optional(),
-  duration_minutes: z
-    .number()
-    .int()
-    .min(1)
-    .max(10080)
-    .nullable()
-    .optional(),
   notes: trimmed(5000).nullable().optional(),
   links: z.array(linkSchema).max(10).default([]),
+  times: z.array(activityTimeSchema).max(10).default([]),
   place_name: trimmed(200).nullable().optional(),
   address: trimmed(400).nullable().optional(),
   lat: z.number().min(-90).max(90).nullable().optional(),

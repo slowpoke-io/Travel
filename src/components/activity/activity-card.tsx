@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
 import { categoryMeta, tagColorClass } from '@/lib/constants'
-import { formatDurationShort, formatTime } from '@/lib/format'
+
 import { getThumbUrl, pickCover } from '@/lib/image-url'
 import type { ActivityWithRelations } from '@/lib/queries'
 import type { TagRow } from '@/lib/supabase/database.types'
@@ -131,16 +131,20 @@ export function ActivityCard({
                   {meta.label}
                 </span>
 
-                {activity.start_time || activity.duration_minutes ? (
-                  <span className="inline-flex items-center gap-1">
+                {/*
+                  重要時間（班機、訂位…）。這些是錯過會有代價的時間，
+                  所以在卡片上要看得到，而不是要點進詳情才發現。
+                */}
+                {activity.times.map((t, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                  >
                     <Clock className="size-3" aria-hidden />
-                    {formatTime(activity.start_time)}
-                    {activity.start_time && activity.duration_minutes
-                      ? ' · '
-                      : ''}
-                    {formatDurationShort(activity.duration_minutes)}
+                    {t.label ? `${t.label} ` : ''}
+                    {t.time}
                   </span>
-                ) : null}
+                ))}
               </div>
 
               {activity.place_name || activity.address ? (

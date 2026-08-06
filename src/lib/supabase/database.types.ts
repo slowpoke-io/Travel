@@ -20,6 +20,17 @@ export type ActivityLink = {
   url: string
 }
 
+/**
+ * 重要時間。刻意做成可命名的清單而不是單一的 start_time ——
+ * 需要記的是班機、訂位、時段票、末班車這類「你無法控制」的時間，
+ * 數量不固定，而且必須說明是什麼時間。
+ */
+export type ActivityTime = {
+  label: string
+  /** HH:MM */
+  time: string
+}
+
 type Timestamps = {
   created_at: string
   updated_at: string
@@ -65,10 +76,9 @@ export type ActivityRow = Timestamps & {
   position: number
   title: string
   category: ActivityCategory
-  start_time: string | null
-  duration_minutes: number | null
   notes: string | null
   links: ActivityLink[]
+  times: ActivityTime[]
   place_name: string | null
   address: string | null
   lat: number | null
@@ -136,9 +146,13 @@ export type Database = {
       >
       activities: TableDef<
         ActivityRow,
-        Omit<ActivityRow, 'id' | 'created_at' | 'updated_at' | 'links'> & {
+        Omit<
+          ActivityRow,
+          'id' | 'created_at' | 'updated_at' | 'links' | 'times'
+        > & {
           id?: string
           links?: ActivityLink[]
+          times?: ActivityTime[]
         },
         Partial<Omit<ActivityRow, 'id' | 'trip_id'>>
       >
