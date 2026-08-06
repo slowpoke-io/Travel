@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
+import { MapPinOff } from 'lucide-react'
 import {
   APIProvider,
   AdvancedMarker,
@@ -146,6 +147,22 @@ export function GoogleTripMap({
   onSelect?: (id: string) => void
   showRoute?: boolean
 }) {
+  // 沒有任何有座標的行程時（例如切到還沒安排的那一天），
+  // 底下會用 points[0] 當地圖中心而炸掉，所以要先擋住。
+  if (points.length === 0) {
+    return (
+      <div
+        className={cn(
+          'bg-muted text-muted-foreground flex flex-col items-center justify-center gap-2 text-xs',
+          className,
+        )}
+      >
+        <MapPinOff className="size-5" aria-hidden />
+        這一天還沒有含地點的行程
+      </div>
+    )
+  }
+
   return (
     <div className={cn('relative overflow-hidden', className)}>
       <APIProvider

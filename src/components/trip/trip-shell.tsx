@@ -30,7 +30,7 @@ export function TripShell({
 
   return (
     <TripAccessProvider value={access}>
-      <div className="mx-auto min-h-dvh w-full max-w-md pb-14">
+      <div className="pb-bottom-nav mx-auto min-h-dvh w-full max-w-md">
         <header className="pt-safe bg-background/90 sticky top-0 z-20 backdrop-blur">
           <div className="flex items-center gap-2 px-3 py-2.5">
             {!isGuest ? (

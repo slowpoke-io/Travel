@@ -182,7 +182,13 @@ export async function setCoverImage(
   if (rpcErr) throw rpcErr
 }
 
-/** 刪除 Storage 物件；失敗只記錄不中斷，孤兒檔案由清理腳本處理 */
+/**
+ * 刪除 Storage 物件；失敗只記錄不中斷，孤兒檔案由清理腳本處理。
+ *
+ * 注意 storage.remove() 在被 RLS 擋下時「不會回傳錯誤」，只會回一個空陣列
+ * （它先 SELECT 找出物件再刪，找不到就等於沒事做）。所以這裡必須比對
+ * 實際刪除的筆數，否則檔案沒刪掉也完全看不出來。
+ */
 export async function removeStorageObjects(
   client: Client,
   paths: (string | null | undefined)[],
@@ -190,11 +196,25 @@ export async function removeStorageObjects(
   const valid = paths.filter((p): p is string => Boolean(p))
   if (!valid.length) return
 
-  const { error } = await client.storage.from(STORAGE_BUCKET).remove(valid)
+  const { data, error } = await client.storage
+    .from(STORAGE_BUCKET)
+    .remove(valid)
+
   if (error) {
     console.error('[storage.remove] 刪除檔案失敗（將由清理腳本處理）', {
       paths: valid,
       error,
     })
+    return
+  }
+
+  const removed = data?.length ?? 0
+  if (removed < valid.length) {
+    console.error(
+      '[storage.remove] 實際刪除筆數少於預期，通常代表 storage.objects 的 ' +
+        'RLS 政策擋下了 SELECT 或 DELETE（見 migration 0006）。' +
+        '這些檔案會變成孤兒，可用 scripts/cleanup-orphan-media.ts 清理。',
+      { expected: valid.length, removed, paths: valid },
+    )
   }
 }

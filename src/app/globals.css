@@ -137,6 +137,20 @@
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
   }
+
+  /*
+   * 底部導覽列佔掉的高度。
+   * 導覽列是 h-14 再加上 pb-safe，所以單純用 pb-14 在有 home indicator 的
+   * 機型上會少一截，最後一段內容會被蓋住而且捲不到。
+   */
+  .pb-bottom-nav {
+    padding-bottom: calc(3.5rem + max(env(safe-area-inset-bottom), 0.5rem));
+  }
+
+  /* 浮在導覽列正上方的元素（FAB、批次操作列） */
+  .bottom-above-nav {
+    bottom: calc(3.5rem + max(env(safe-area-inset-bottom), 0.5rem));
+  }
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }

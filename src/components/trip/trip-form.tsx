@@ -18,8 +18,13 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  PendingImagePicker,
+  type PendingImage,
+} from '@/components/image/pending-image-picker'
 import type { ActionResult } from '@/lib/action-result'
 import type { TripInput } from '@/lib/schemas'
+import { uploadTripCover } from '@/lib/upload-trip-cover'
 
 type Props = {
   mode: 'create' | 'edit'
@@ -60,6 +65,8 @@ export function TripForm({
     return from ? { from, to } : undefined
   })
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [cover, setCover] = useState<PendingImage[]>([])
+  const [uploadingCover, setUploadingCover] = useState(false)
 
   const nights =
     range?.from && range?.to
@@ -99,8 +106,16 @@ export function TripForm({
         return
       }
 
-      toast.success(mode === 'create' ? '旅遊已建立' : '已儲存')
       const newId = typeof result.data === 'string' ? result.data : undefined
+
+      // 封面要等旅遊存在之後才能上傳（images 的外鍵指向 trip）
+      if (newId && cover[0]) {
+        setUploadingCover(true)
+        await uploadTripCover(newId, cover[0].file)
+        setUploadingCover(false)
+      }
+
+      toast.success(mode === 'create' ? '旅遊已建立' : '已儲存')
       if (onSaved) onSaved(newId)
       else if (newId) router.push(`/trips/${newId}`)
       else router.refresh()
@@ -201,6 +216,17 @@ export function TripForm({
         ) : null}
       </div>
 
+      {mode === 'create' ? (
+        <div className="space-y-2">
+          <Label>封面圖片</Label>
+          <PendingImagePicker
+            images={cover}
+            onChange={(next) => setCover(next.slice(-1))}
+            hasExistingCover={false}
+          />
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         <Label htmlFor="trip-summary">備註</Label>
         <Textarea
@@ -217,11 +243,15 @@ export function TripForm({
       <Button
         type="submit"
         size="lg"
-        disabled={pending}
+        disabled={pending || uploadingCover}
         className="h-12 w-full text-base"
       >
-        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-        {submitLabel ?? (mode === 'create' ? '建立旅遊' : '儲存')}
+        {pending || uploadingCover ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : null}
+        {uploadingCover
+          ? '上傳封面…'
+          : (submitLabel ?? (mode === 'create' ? '建立旅遊' : '儲存'))}
       </Button>
     </form>
   )

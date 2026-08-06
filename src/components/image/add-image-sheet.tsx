@@ -44,12 +44,22 @@ export function AddImageSheet({
   activityId,
   open,
   onOpenChange,
+  hasCover = false,
 }: {
   activityId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** 這個行程是否已經有封面 —— 有的話就不提供「封面」選項 */
+  hasCover?: boolean
 }) {
   const router = useRouter()
+
+  /*
+    封面只能有一張（資料庫的 partial unique index 擋著），
+    已經有的話再選「封面」只會撞上約束，所以直接不顯示。
+    要換封面是到詳情頁點圖片選「設為封面」。
+  */
+  const roles = hasCover ? ROLES.filter((r) => r.role !== 'cover') : ROLES
 
   function handleUploaded() {
     onOpenChange(false)
@@ -63,11 +73,12 @@ export function AddImageSheet({
           <DrawerTitle>加入圖片</DrawerTitle>
           <DrawerDescription>
             選擇圖片的用途，之後在行程詳情頁也能調整。
+            {hasCover ? '（已有封面，要更換請到詳情頁點圖片設定）' : ''}
           </DrawerDescription>
         </DrawerHeader>
 
         <div className="space-y-2 px-4">
-          {ROLES.map(({ role, icon: Icon, label, hint }) => (
+          {roles.map(({ role, icon: Icon, label, hint }) => (
             <div
               key={role}
               className="flex items-center gap-3 rounded-lg border p-3"

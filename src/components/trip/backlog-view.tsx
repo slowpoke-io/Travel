@@ -180,7 +180,7 @@ export function BacklogView({
 
       {/* 多選模式的批次操作列 */}
       {selectMode && selected.length > 0 ? (
-        <div className="bg-background pb-safe fixed inset-x-0 bottom-14 z-30 mx-auto max-w-md border-t px-4 py-3">
+        <div className="bg-background fixed inset-x-0 bottom-above-nav z-30 mx-auto max-w-md border-t px-4 py-3">
           <div className="flex items-center gap-2">
             <p className="flex-1 text-sm font-medium">
               已選 {selected.length} 個
@@ -201,7 +201,7 @@ export function BacklogView({
       ) : null}
 
       {canEdit && !selectMode ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-14 z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
+        <div className="pointer-events-none fixed inset-x-0 bottom-above-nav z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
           <Button
             size="lg"
             onClick={() => setAddOpen(true)}
@@ -251,6 +251,12 @@ export function BacklogView({
         activityId={imageTarget}
         open={Boolean(imageTarget)}
         onOpenChange={(open) => !open && setImageTarget(null)}
+        hasCover={Boolean(
+          imageTarget &&
+            backlogActivities
+              .find((a) => a.id === imageTarget)
+              ?.images.some((i) => i.role === 'cover'),
+        )}
       />
     </>
   )
