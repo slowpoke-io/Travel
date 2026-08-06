@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { fail, failFrom, ok, type ActionResult } from '@/lib/action-result'
 import { requireUser } from '@/lib/auth'
-import { removeStorageObjects } from '@/lib/mutations/images'
+import { deleteTripWithMedia } from '@/lib/mutations/images'
 import { tripInputSchema, type TripInput } from '@/lib/schemas'
 import { newShareToken } from '@/lib/share/guard'
 import { createClient } from '@/lib/supabase/server'
@@ -132,19 +132,9 @@ export async function deleteTrip(tripId: string): Promise<ActionResult> {
   try {
     const { supabase } = await assertOwnsTrip(tripId)
 
-    // DB cascade 會清掉 images 列，但 Storage 檔案要自己刪
-    const { data: images } = await supabase
-      .from('images')
-      .select('path, thumb_path')
-      .eq('trip_id', tripId)
-
-    const { error } = await supabase.from('trips').delete().eq('id', tripId)
-    if (error) throw error
-
-    await removeStorageObjects(
-      supabase,
-      (images ?? []).flatMap((i) => [i.path, i.thumb_path]),
-    )
+    // 刪檔案與刪資料列的順序由 deleteTripWithMedia 保證 —— 對調的話
+    // storage 的 RLS 會判定不出擁有者，檔案會全部變成孤兒
+    await deleteTripWithMedia(supabase, tripId)
 
     revalidatePath('/trips')
     return ok()

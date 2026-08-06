@@ -197,25 +197,63 @@ export async function removeStorageObjects(
   const valid = paths.filter((p): p is string => Boolean(p))
   if (!valid.length) return
 
-  const { data, error } = await client.storage
-    .from(STORAGE_BUCKET)
-    .remove(valid)
+  let removed = 0
+  // 單次請求的筆數有上限，一趟旅遊的圖片可能很多
+  const BATCH = 100
+  for (let i = 0; i < valid.length; i += BATCH) {
+    const batch = valid.slice(i, i + BATCH)
+    const { data, error } = await client.storage
+      .from(STORAGE_BUCKET)
+      .remove(batch)
 
-  if (error) {
-    console.error('[storage.remove] 刪除檔案失敗（將由清理腳本處理）', {
-      paths: valid,
-      error,
-    })
-    return
+    if (error) {
+      console.error('[storage.remove] 刪除檔案失敗（將由清理腳本處理）', {
+        paths: batch,
+        error,
+      })
+      continue
+    }
+    removed += data?.length ?? 0
   }
 
-  const removed = data?.length ?? 0
   if (removed < valid.length) {
     console.error(
-      '[storage.remove] 實際刪除筆數少於預期，通常代表 storage.objects 的 ' +
-        'RLS 政策擋下了 SELECT 或 DELETE（見 migration 0006）。' +
-        '這些檔案會變成孤兒，可用 scripts/cleanup-orphan-media.ts 清理。',
+      '[storage.remove] 實際刪除筆數少於預期。最常見的原因是 storage.objects ' +
+        '的 RLS 擋下了操作 —— policy 用 is_trip_owner(trip_id) 判定，' +
+        '所以「trips 那一列已經被刪掉之後」再來刪檔案一定會失敗。' +
+        '刪檔案務必排在刪資料列之前。' +
+        '這些檔案已成孤兒，可用 scripts/cleanup-orphan-media.ts 清理。',
       { expected: valid.length, removed, paths: valid },
     )
   }
+}
+
+/**
+ * 刪除整趟旅遊，連同它的所有圖片檔案。
+ *
+ * **順序很重要，而且不可對調。** storage.objects 的 RLS policy 是
+ * `is_trip_owner((storage.foldername(name))[1]::uuid)` —— 它查的是 trips 表。
+ * 一旦 trips 那一列被刪掉，policy 就再也判定不出擁有者，remove() 會靜默地
+ * 刪掉 0 筆（它在被 RLS 擋下時不回傳錯誤），檔案全部變成孤兒。
+ *
+ * 所以：先刪 Storage 的檔案，最後才刪 trips 那一列。
+ * images 資料列會隨著 trips 一起 cascade 消失，不需要另外處理。
+ */
+export async function deleteTripWithMedia(
+  client: Client,
+  tripId: string,
+): Promise<void> {
+  const { data: images, error: readErr } = await client
+    .from('images')
+    .select('path, thumb_path')
+    .eq('trip_id', tripId)
+  if (readErr) throw readErr
+
+  await removeStorageObjects(
+    client,
+    (images ?? []).flatMap((i) => [i.path, i.thumb_path]),
+  )
+
+  const { error } = await client.from('trips').delete().eq('id', tripId)
+  if (error) throw error
 }
