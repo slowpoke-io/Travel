@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, MapPin, Plus, Search, Trash2, X } from 'lucide-react'
+import { Loader2, MapPin, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PlaceSearch, type PlaceResult } from '@/components/map/place-search'
@@ -13,12 +13,7 @@ import {
 } from '@/components/image/pending-image-picker'
 import { useImageUpload } from '@/lib/use-image-upload'
 import { Button } from '@/components/ui/button'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
+import { FullScreenSheet } from '@/components/ui/full-screen-sheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -112,32 +107,26 @@ export function ActivityFormSheet({
   onSaved,
 }: Props) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[92dvh]">
-        <DrawerHeader className="border-b py-3">
-          <DrawerTitle className="text-base">
-            {activity ? '編輯行程' : dayId ? '新增行程' : '新增到儲備區'}
-          </DrawerTitle>
-        </DrawerHeader>
-
-        {/*
-          用 key 讓表單在每次開啟（或切換編輯對象）時重新掛載，
-          初始值直接由 useState 初始化函式帶入。
-          這比在 effect 裡 setState 重設乾淨，也不會有串連渲染。
-        */}
-        {open ? (
-          <ActivityFormBody
-            key={activity?.id ?? 'new'}
-            dayId={dayId}
-            activity={activity}
-            tags={tags}
-            placeSearchEnabled={placeSearchEnabled}
-            onOpenChange={onOpenChange}
-            onSaved={onSaved}
-          />
-        ) : null}
-      </DrawerContent>
-    </Drawer>
+    <FullScreenSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={activity ? '編輯行程' : dayId ? '新增行程' : '新增到儲備區'}
+    >
+      {/*
+        用 key 讓表單在每次開啟（或切換編輯對象）時重新掛載，
+        初始值直接由 useState 初始化函式帶入。
+        這比在 effect 裡 setState 重設乾淨，也不會有串連渲染。
+      */}
+      <ActivityFormBody
+        key={activity?.id ?? 'new'}
+        dayId={dayId}
+        activity={activity}
+        tags={tags}
+        placeSearchEnabled={placeSearchEnabled}
+        onOpenChange={onOpenChange}
+        onSaved={onSaved}
+      />
+    </FullScreenSheet>
   )
 }
 
@@ -156,7 +145,6 @@ function ActivityFormBody({
     activity ? fromActivity(activity) : emptyState(),
   )
   const [localTags, setLocalTags] = useState<TagRow[]>(tags)
-  const [searchOpen, setSearchOpen] = useState(false)
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
 
   const isEdit = Boolean(activity)
@@ -180,7 +168,6 @@ function ActivityFormBody({
       lng: place.lng,
       googlePlaceId: place.googlePlaceId,
     }))
-    setSearchOpen(false)
   }
 
   function clearPlace() {
@@ -291,18 +278,17 @@ function ActivityFormBody({
                       <X className="size-4" aria-hidden />
                     </Button>
                   </div>
-                ) : searchOpen ? (
-                  <PlaceSearch onSelect={applyPlace} enabled={placeSearchEnabled} />
                 ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSearchOpen(true)}
-                    className="h-11 w-full justify-start gap-2 font-normal"
-                  >
-                    <Search className="size-4" aria-hidden />
-                    <span className="text-muted-foreground">搜尋地點</span>
-                  </Button>
+                  /*
+                    直接顯示搜尋框，不要再包一層「搜尋地點」按鈕。
+                    包按鈕的話要點兩次（先展開、再聚焦）才能開始打字，而且
+                    Google 的 script 要等展開後才開始載入，第一次點下去往往
+                    還沒就緒。直接渲染的話表單一開啟就開始載入。
+                  */
+                  <PlaceSearch
+                    onSelect={applyPlace}
+                    enabled={placeSearchEnabled}
+                  />
                 )}
               </div>
             ) : null}

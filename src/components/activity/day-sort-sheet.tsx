@@ -27,12 +27,7 @@ import { ChevronDown, ChevronUp, GripVertical, Inbox, Loader2 } from 'lucide-rea
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer'
+import { FullScreenSheet } from '@/components/ui/full-screen-sheet'
 import { categoryMeta } from '@/lib/constants'
 import type { ActivityWithRelations } from '@/lib/queries'
 import { useTripMutations } from '@/lib/use-trip-mutations'
@@ -178,17 +173,19 @@ export function DaySortSheet({
   const activeActivity = activeId ? byId.get(activeId) : null
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[92dvh]">
-        <DrawerHeader className="flex-row items-center justify-between border-b py-3">
-          <DrawerTitle className="text-base">排序 · {dayLabel}</DrawerTitle>
-          <Button size="sm" onClick={save} disabled={pending}>
-            {pending ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : null}
-            完成
-          </Button>
-        </DrawerHeader>
+    <FullScreenSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`排序 · ${dayLabel}`}
+      headerAction={
+        <Button size="sm" onClick={save} disabled={pending}>
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+          ) : null}
+          完成
+        </Button>
+      }
+    >
 
         <DndContext
           sensors={sensors}
@@ -249,11 +246,10 @@ export function DaySortSheet({
           </DragOverlay>
         </DndContext>
 
-        <p className="text-muted-foreground pb-safe border-t px-4 py-2 text-center text-xs">
-          按住左側 ⣿ 把手拖曳排序，可跨區搬到儲備區
-        </p>
-      </DrawerContent>
-    </Drawer>
+      <p className="text-muted-foreground pb-safe border-t px-4 py-2 text-center text-xs">
+        按住左側 ⣿ 把手拖曳排序，可跨區搬到儲備區
+      </p>
+    </FullScreenSheet>
   )
 }
 

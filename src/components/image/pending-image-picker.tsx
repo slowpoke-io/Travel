@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import {
   DndContext,
@@ -194,13 +193,16 @@ function SortableThumb({
         {...listeners}
         className="drag-handle bg-muted relative aspect-square overflow-hidden rounded-lg"
       >
-        <Image
+        {/*
+          預覽用原生 <img> 而不是 next/image：來源是本機的 blob URL，
+          next/image 幫不上任何忙（一定要 unoptimized），但它的版面計算會在
+          一次選多張時造成明顯的閃爍與重排。
+        */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={image.previewUrl}
           alt=""
-          fill
-          sizes="25vw"
-          unoptimized
-          className="pointer-events-none object-cover"
+          className="pointer-events-none absolute inset-0 size-full object-cover"
         />
         {isCover ? (
           <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1 text-[9px] text-white">
