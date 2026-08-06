@@ -28,9 +28,13 @@ export const publicEnv = {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     )
   },
-  /** 選配：沒填時地圖與地點搜尋降級為手動輸入，其餘功能不受影響 */
+  /** 選配：沒填時地點搜尋降級為手動輸入，「地圖」分頁改用 Leaflet */
   get googleMapsApiKey() {
     return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''
+  },
+  /** 「地圖」分頁的 Google 地圖用；AdvancedMarker（編號標記）需要 Map ID */
+  get googleMapsMapId() {
+    return process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? ''
   },
 }
 

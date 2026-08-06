@@ -9,7 +9,9 @@ import {
   toMappedActivities,
   type MappedActivity,
 } from '@/components/map/activity-map'
+import { GoogleTripMap } from '@/components/map/google-trip-map'
 import { useBasePath } from '@/components/trip/trip-access'
+import { isPlaceSearchEnabled } from '@/lib/env'
 import { categoryMeta, dayColor } from '@/lib/constants'
 import { formatDayLabel } from '@/lib/format'
 import type { ActivityWithRelations } from '@/lib/queries'
@@ -21,6 +23,11 @@ const ALL = 'all'
 /**
  * 全程地圖。可切換「全部」或單一天。
  * 「全部」模式每天用不同顏色，並且不畫連線 —— 跨天連線只會讓畫面變亂。
+ *
+ * 這個分頁用 Google 地圖：它是專門看地圖的地方，Google 的圖資（海外店家、
+ * 大眾運輸、街道細節）明顯較完整，值得用掉 API 額度。每日行程頁的地圖只是
+ * 輔助確認動線，維持用 Leaflet。
+ * 沒有設定金鑰時這裡會自動退回 Leaflet，不會變成空白畫面。
  */
 export function TripMapView({
   days,
@@ -30,6 +37,7 @@ export function TripMapView({
   byDay: Record<string, ActivityWithRelations[]>
 }) {
   const base = useBasePath()
+  const useGoogle = isPlaceSearchEnabled()
   const [selectedDay, setSelectedDay] = useState<string>(ALL)
   const [focusId, setFocusId] = useState<string | null>(null)
 
@@ -77,13 +85,23 @@ export function TripMapView({
         </div>
       </div>
 
-      <ActivityMap
-        points={points}
-        selectedId={focusId}
-        onSelect={setFocusId}
-        showRoute={selectedDay !== ALL}
-        className="h-[52dvh] w-full"
-      />
+      {useGoogle ? (
+        <GoogleTripMap
+          points={points}
+          selectedId={focusId}
+          onSelect={setFocusId}
+          showRoute={selectedDay !== ALL}
+          className="h-[52dvh] w-full"
+        />
+      ) : (
+        <ActivityMap
+          points={points}
+          selectedId={focusId}
+          onSelect={setFocusId}
+          showRoute={selectedDay !== ALL}
+          className="h-[52dvh] w-full"
+        />
+      )}
 
       {/* 點地圖標記後彈出的小卡 */}
       {focused ? (

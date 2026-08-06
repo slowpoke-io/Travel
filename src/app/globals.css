@@ -167,3 +167,47 @@
     overflow: hidden;
   }
 }
+
+/*
+ * Leaflet 的 popup 與控制項自帶白底樣式，深色模式下會很突兀。
+ * 這裡讓它們跟著 App 的主題色走。
+ */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-lg);
+}
+
+.leaflet-popup-content {
+  margin: 0.625rem 0.875rem;
+  line-height: 1.4;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted-foreground);
+}
+
+/* 底部的圖資來源標示 */
+.leaflet-container .leaflet-control-attribution {
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--muted-foreground);
+}
+
+/* 縮放控制項 */
+.leaflet-container .leaflet-bar a {
+  background: var(--background);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.leaflet-container .leaflet-bar a:hover {
+  background: var(--muted);
+}

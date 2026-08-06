@@ -36,6 +36,8 @@ export function toMappedActivities(
       lng: a.lng,
       order: index + 1,
       color,
+      // 點擊標記時一併顯示，方便確認是不是同名的另一家分店
+      subtitle: a.address ?? a.place_name,
     })
   })
   return mapped

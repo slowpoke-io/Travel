@@ -6,6 +6,7 @@ import {
   MapContainer,
   Marker,
   Polyline,
+  Popup,
   TileLayer,
   useMap,
 } from 'react-leaflet'
@@ -22,6 +23,8 @@ export type MappedActivity = {
   /** 標記上顯示的序號 */
   order: number
   color: string
+  /** 點擊標記時額外顯示的說明（通常是地址） */
+  subtitle?: string | null
 }
 
 /**
@@ -156,7 +159,19 @@ export function LeafletMap({
           eventHandlers={
             onSelect ? { click: () => onSelect(point.id) } : undefined
           }
-        />
+        >
+          {/* 點擊標記時顯示名稱 —— 只有編號的話根本認不出是哪個行程 */}
+          <Popup closeButton={false} autoPan>
+            <span className="block text-sm font-medium">
+              {point.order}. {point.title}
+            </span>
+            {point.subtitle ? (
+              <span className="text-muted-foreground mt-0.5 block text-xs">
+                {point.subtitle}
+              </span>
+            ) : null}
+          </Popup>
+        </Marker>
       ))}
     </MapContainer>
   )
