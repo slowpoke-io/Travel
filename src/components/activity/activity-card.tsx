@@ -104,7 +104,13 @@ export function ActivityCard({
           </div>
         ) : null}
 
-        <div className="min-w-0 flex-1 py-3 pr-2">
+        {/* 沒有序號徽章時（儲備區）左側要自己補內距，否則內容會貼著卡片邊緣 */}
+        <div
+          className={cn(
+            'min-w-0 flex-1 py-3 pr-2',
+            order === undefined && 'pl-3',
+          )}
+        >
           <div className="flex items-start gap-3">
             <Link
               href={`${base}/a/${activity.id}`}

@@ -34,13 +34,13 @@ export function BacklogView({
   backlogActivities,
   tags,
   counts,
-  mapsEnabled,
+  placeSearchEnabled,
 }: {
   days: TripDayRow[]
   backlogActivities: ActivityWithRelations[]
   tags: TagRow[]
   counts: Record<string, number>
-  mapsEnabled: boolean
+  placeSearchEnabled: boolean
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -218,7 +218,7 @@ export function BacklogView({
         onOpenChange={setAddOpen}
         dayId={null}
         tags={tags}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onSaved={() => router.refresh()}
       />
 
@@ -228,7 +228,7 @@ export function BacklogView({
         dayId={null}
         activity={editing}
         tags={tags}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onSaved={() => router.refresh()}
       />
 

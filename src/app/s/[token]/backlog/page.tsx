@@ -1,6 +1,6 @@
 import { BacklogView } from '@/components/trip/backlog-view'
 import { TripShell } from '@/components/trip/trip-shell'
-import { isMapsEnabled } from '@/lib/env'
+import { isPlaceSearchEnabled } from '@/lib/env'
 import { getShareTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
 
@@ -20,14 +20,13 @@ export default async function SharedBacklogPage({
       access={access}
       title={bundle.trip.title}
       currentDayIndex={1}
-      mapsEnabled={isMapsEnabled()}
     >
       <BacklogView
         days={bundle.days}
         backlogActivities={vm.backlog}
         tags={bundle.tags}
         counts={vm.counts}
-        mapsEnabled={isMapsEnabled()}
+        placeSearchEnabled={isPlaceSearchEnabled()}
       />
     </TripShell>
   )

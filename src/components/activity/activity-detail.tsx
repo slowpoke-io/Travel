@@ -32,14 +32,14 @@ export function ActivityDetail({
   days,
   counts,
   backlogCount,
-  mapsEnabled,
+  placeSearchEnabled,
 }: {
   activity: ActivityWithRelations
   tags: TagRow[]
   days: TripDayRow[]
   counts: Record<string, number>
   backlogCount: number
-  mapsEnabled: boolean
+  placeSearchEnabled: boolean
 }) {
   const router = useRouter()
   const base = useBasePath()
@@ -171,7 +171,7 @@ export function ActivityDetail({
 
                 {/*
                   這兩個只是連到 google.com/maps 的外部連結，不需要 API 金鑰，
-                  所以不能跟地圖元件一樣被 mapsEnabled 擋住。
+                  所以不能跟地圖元件一樣被 placeSearchEnabled 擋住。
                 */}
                 <div className="mt-3 flex gap-2 pl-6">
                   <Button asChild variant="outline" size="sm" className="gap-1.5">
@@ -257,7 +257,7 @@ export function ActivityDetail({
         dayId={activity.day_id}
         activity={activity}
         tags={tags}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onSaved={() => router.refresh()}
       />
 

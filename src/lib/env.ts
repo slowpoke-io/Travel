@@ -32,14 +32,10 @@ export const publicEnv = {
   get googleMapsApiKey() {
     return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''
   },
-  /** AdvancedMarker 需要 Map ID */
-  get googleMapsMapId() {
-    return process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? ''
-  },
 }
 
 /** 地圖功能是否可用；未設定金鑰時 UI 會顯示提示而不是壞掉的地圖 */
-export function isMapsEnabled(): boolean {
+export function isPlaceSearchEnabled(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
 }
 

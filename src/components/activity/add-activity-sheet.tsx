@@ -37,7 +37,7 @@ export function AddActivitySheet({
   dayId,
   dayLabel,
   backlogActivities,
-  mapsEnabled,
+  placeSearchEnabled,
   onCreateNew,
 }: {
   open: boolean
@@ -45,7 +45,7 @@ export function AddActivitySheet({
   dayId: string
   dayLabel: string
   backlogActivities: ActivityWithRelations[]
-  mapsEnabled: boolean
+  placeSearchEnabled: boolean
   onCreateNew: () => void
 }) {
   const router = useRouter()
@@ -100,7 +100,7 @@ export function AddActivitySheet({
                   icon={PencilLine}
                   title="建立新行程"
                   hint={
-                    mapsEnabled
+                    placeSearchEnabled
                       ? '搜尋地點自動帶入座標，或自己輸入'
                       : '輸入名稱、時間與備註'
                   }

@@ -137,7 +137,12 @@ export function ImageGallery({
                 </ul>
               )}
 
-              {canEdit ? (
+              {/*
+                封面只能有一張（資料庫的 partial unique index 擋著），
+                已經有封面時就不該再出現「加入封面圖片」——
+                要換封面是到其他分頁長按圖片選「設為封面」。
+              */}
+              {canEdit && !(role === 'cover' && list.length > 0) ? (
                 <ImagePickerButton
                   activityId={activityId}
                   role={role}
@@ -145,6 +150,12 @@ export function ImageGallery({
                   className="w-full"
                   onUploaded={() => router.refresh()}
                 />
+              ) : null}
+
+              {role === 'cover' && list.length > 0 && canEdit ? (
+                <p className="text-muted-foreground text-center text-xs">
+                  封面只能有一張。要換的話，到「資訊」或「紀錄」分頁點圖片後選「設為封面」。
+                </p>
               ) : null}
             </TabsContent>
           )

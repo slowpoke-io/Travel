@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { ActivityDetail } from '@/components/activity/activity-detail'
 import { TripShell } from '@/components/trip/trip-shell'
-import { isMapsEnabled } from '@/lib/env'
+import { isPlaceSearchEnabled } from '@/lib/env'
 import { getOwnerTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
 
@@ -36,7 +36,6 @@ export default async function ActivityDetailPage({
       access={access}
       title={bundle.trip.title}
       currentDayIndex={currentDay?.day_index ?? 1}
-      mapsEnabled={isMapsEnabled()}
     >
       <ActivityDetail
         activity={activity}
@@ -44,7 +43,7 @@ export default async function ActivityDetailPage({
         days={bundle.days}
         counts={vm.counts}
         backlogCount={vm.backlog.length}
-        mapsEnabled={isMapsEnabled()}
+        placeSearchEnabled={isPlaceSearchEnabled()}
       />
     </TripShell>
   )

@@ -2,7 +2,7 @@
 
 以手機使用為主的旅遊規劃 App。Google 登入後管理多趟旅遊，每趟旅遊有「行程儲備區」放還沒排定的地點，可以方便地丟到某一天；每天的行程能拖曳排序、在地圖上看到順序，並上傳圖片作為封面／資訊／旅遊紀錄。
 
-**技術**：Next.js 16（App Router）· Tailwind v4 · shadcn/ui · Supabase（Postgres + Auth + Storage + RLS）· dnd-kit · Google Maps · PWA
+**技術**：Next.js 16（App Router）· Tailwind v4 · shadcn/ui · Supabase（Postgres + Auth + Storage + RLS）· dnd-kit · Leaflet · PWA
 
 ---
 
@@ -14,7 +14,8 @@ cp .env.example .env.local     # 填入下方步驟取得的值
 npm run dev                    # http://localhost:3000
 ```
 
-沒有填 Google Maps 金鑰也能跑 —— 地圖區塊會顯示提示，地點改為手動輸入，其餘功能完全正常。
+**地圖不需要任何金鑰**（Leaflet + OpenStreetMap）。Google 金鑰只影響「搜尋地點自動帶入座標」這一項，
+沒填的話改成手動輸入名稱與地址即可，其餘功能完全正常。
 但 **Supabase 的三個變數是必填的**，否則啟動後會看到「尚未完成設定」的畫面。
 
 ---
@@ -56,7 +57,10 @@ npx supabase db push
 5. 把 Client ID 與 Client Secret 貼回 Supabase 的
    **Authentication → Providers → Google**，並啟用
 
-### 4. Google Maps（選填但建議）
+### 4. Google 地點搜尋（選填）
+
+地圖本身用 Leaflet + OpenStreetMap，不需要金鑰。Google 只用於**搜尋地點時自動帶入座標**，
+以及行程詳情頁的「在地圖開啟／導航」外部連結（那兩個連結是純網址，不需要金鑰）。
 
 1. 同一個 Google Cloud 專案 → **API 和服務 → 程式庫**，啟用這兩個：
    - **Maps JavaScript API**
@@ -65,12 +69,7 @@ npx supabase db push
 3. **一定要設定金鑰限制**（這個金鑰會出現在前端原始碼中）：
    - 應用程式限制：**HTTP 參照網址** → `http://localhost:3000/*` 與正式網域
    - API 限制：只勾上面那兩個 API
-4. **Google Maps Platform → 地圖管理 → 建立地圖 ID**
-   （類型 **JavaScript**、**向量**）→ 填入 `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`
-
-   有編號的地圖標記（AdvancedMarker）需要 Map ID，沒有的話標記不會出現。
-
-5. 需要綁信用卡，但有每月免費額度，個人使用幾乎不會超過。
+4. 需要綁信用卡，但有每月免費額度，個人使用幾乎不會超過。
 
 ---
 
@@ -131,6 +130,10 @@ scripts/cleanup-orphan-media.ts
 
 **封面用 `role` + partial unique index**，而不是在 `activities` 上放 `cover_image_id`。
 避免循環外鍵與懸空指標，換封面只要 update 一列。
+
+**地圖用 Leaflet，座標用 Google。** 兩者分工：Leaflet + OpenStreetMap 負責「畫出來」，
+完全免費且不需金鑰，所以地圖永遠可用；Google Places 負責「搜尋地點取得座標」，
+這是它真正不可取代的地方。導航與「在地圖開啟」是純外部網址，同樣不需金鑰。
 
 **Storage bucket 是公開讀取的**（路徑含隨機 UUID）。
 需求同時要「公開分享連結」與「PWA 離線看圖」，私有 bucket 的簽名 URL 每小時會換，

@@ -1,27 +1,25 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
-import {
-  AdvancedMarker,
-  Map,
-  useMap,
-} from '@vis.gl/react-google-maps'
+import dynamic from 'next/dynamic'
 import { MapPinOff } from 'lucide-react'
 
-import { RoutePolyline } from '@/components/map/route-polyline'
-import { publicEnv } from '@/lib/env'
 import type { ActivityWithRelations } from '@/lib/queries'
 import { cn } from '@/lib/utils'
+import type { MappedActivity } from '@/components/map/leaflet-map'
 
-export type MappedActivity = {
-  id: string
-  title: string
-  lat: number
-  lng: number
-  /** 標記上顯示的序號 */
-  order: number
-  color: string
-}
+export type { MappedActivity }
+
+/**
+ * Leaflet 會直接操作 window / document，不能在 server 端渲染，
+ * 所以動態載入並關掉 SSR。
+ */
+const LeafletMap = dynamic(
+  () => import('@/components/map/leaflet-map').then((m) => m.LeafletMap),
+  {
+    ssr: false,
+    loading: () => <div className="bg-muted size-full animate-pulse" />,
+  },
+)
 
 /** 從行程陣列中挑出有座標的，並附上序號 */
 export function toMappedActivities(
@@ -43,27 +41,12 @@ export function toMappedActivities(
   return mapped
 }
 
-/** 地圖載入後自動框住所有標記 */
-function FitBounds({ points }: { points: MappedActivity[] }) {
-  const map = useMap()
-
-  useEffect(() => {
-    if (!map || points.length === 0) return
-
-    if (points.length === 1) {
-      map.setCenter({ lat: points[0].lat, lng: points[0].lng })
-      map.setZoom(15)
-      return
-    }
-
-    const bounds = new google.maps.LatLngBounds()
-    for (const p of points) bounds.extend({ lat: p.lat, lng: p.lng })
-    map.fitBounds(bounds, 48)
-  }, [map, points])
-
-  return null
-}
-
+/**
+ * 行程地圖。
+ *
+ * 底圖用 Leaflet + OpenStreetMap（CARTO 樣式），不需要任何 API 金鑰，
+ * 所以地圖永遠可用。座標則是在新增行程時由 Google Places 帶入的。
+ */
 export function ActivityMap({
   points,
   className,
@@ -77,11 +60,6 @@ export function ActivityMap({
   onSelect?: (id: string) => void
   showRoute?: boolean
 }) {
-  const path = useMemo(
-    () => points.map((p) => ({ lat: p.lat, lng: p.lng })),
-    [points],
-  )
-
   if (points.length === 0) {
     return (
       <div
@@ -98,39 +76,12 @@ export function ActivityMap({
 
   return (
     <div className={cn('relative overflow-hidden', className)}>
-      <Map
-        mapId={publicEnv.googleMapsMapId || undefined}
-        defaultCenter={{ lat: points[0].lat, lng: points[0].lng }}
-        defaultZoom={13}
-        gestureHandling="greedy"
-        disableDefaultUI
-        zoomControl
-        className="size-full"
-      >
-        <FitBounds points={points} />
-        {showRoute ? (
-          <RoutePolyline path={path} color={points[0].color} />
-        ) : null}
-
-        {points.map((point) => (
-          <AdvancedMarker
-            key={point.id}
-            position={{ lat: point.lat, lng: point.lng }}
-            title={point.title}
-            onClick={onSelect ? () => onSelect(point.id) : undefined}
-          >
-            <span
-              className={cn(
-                'flex size-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-md transition-transform',
-                selectedId === point.id && 'scale-125',
-              )}
-              style={{ backgroundColor: point.color }}
-            >
-              {point.order}
-            </span>
-          </AdvancedMarker>
-        ))}
-      </Map>
+      <LeafletMap
+        points={points}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        showRoute={showRoute}
+      />
     </div>
   )
 }

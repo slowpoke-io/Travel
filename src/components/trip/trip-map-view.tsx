@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { ChevronRight, MapPinOff } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 import {
   ActivityMap,
@@ -25,11 +25,9 @@ const ALL = 'all'
 export function TripMapView({
   days,
   byDay,
-  mapsEnabled,
 }: {
   days: TripDayRow[]
   byDay: Record<string, ActivityWithRelations[]>
-  mapsEnabled: boolean
 }) {
   const base = useBasePath()
   const [selectedDay, setSelectedDay] = useState<string>(ALL)
@@ -56,19 +54,6 @@ export function TripMapView({
         .flat()
         .find((a) => a.id === focusId)
     : null
-
-  if (!mapsEnabled) {
-    return (
-      <div className="flex flex-col items-center px-8 py-24 text-center">
-        <MapPinOff className="text-muted-foreground size-8" aria-hidden />
-        <p className="mt-4 font-medium">地圖尚未設定</p>
-        <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-          在 .env.local 填入 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY 之後，
-          這裡就會顯示每天行程的順序標記。
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col">

@@ -36,7 +36,7 @@ type Props = {
   backlogActivities: ActivityWithRelations[]
   tags: TagRow[]
   counts: Record<string, number>
-  mapsEnabled: boolean
+  placeSearchEnabled: boolean
 }
 
 export function DayView({
@@ -46,7 +46,7 @@ export function DayView({
   backlogActivities,
   tags,
   counts,
-  mapsEnabled,
+  placeSearchEnabled,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -97,33 +97,6 @@ export function DayView({
         currentDayIndex={currentDay.day_index}
         counts={counts}
       />
-
-      {/* 可收合的地圖條：預設收合，點一下展開成半螢幕 */}
-      {mapsEnabled && mapPoints.length > 0 ? (
-        <div className="border-b">
-          <ActivityMap
-            points={mapPoints}
-            className={mapOpen ? 'h-[45dvh]' : 'h-28'}
-          />
-          <button
-            type="button"
-            onClick={() => setMapOpen((v) => !v)}
-            className="text-muted-foreground hover:text-foreground flex h-9 w-full items-center justify-center gap-1 text-xs"
-          >
-            {mapOpen ? (
-              <>
-                <ChevronUp className="size-3.5" aria-hidden />
-                收合地圖
-              </>
-            ) : (
-              <>
-                <ChevronDown className="size-3.5" aria-hidden />
-                展開地圖（{mapPoints.length} 個地點）
-              </>
-            )}
-          </button>
-        </div>
-      ) : null}
 
       <FilterBar tags={tags} availableCategories={availableCategories} />
 
@@ -179,6 +152,42 @@ export function DayView({
             篩選中，隱藏了 {dayActivities.length - visible.length} 個行程
           </p>
         ) : null}
+
+        {/*
+          地圖放在行程列表之後。規劃時的主體是「當天要去哪些地方、順序如何」，
+          地圖是輔助確認動線用的，佔住第一屏反而把行程擠下去。
+          預設收合成一條，需要時才展開。
+        */}
+        {mapPoints.length > 0 ? (
+          <section className="overflow-hidden rounded-xl border">
+            <button
+              type="button"
+              onClick={() => setMapOpen((v) => !v)}
+              aria-expanded={mapOpen}
+              className="hover:bg-muted/50 flex h-11 w-full items-center gap-2 px-4 text-sm"
+            >
+              <MapIcon className="text-muted-foreground size-4" aria-hidden />
+              <span className="flex-1 text-left font-medium">
+                地圖動線
+                <span className="text-muted-foreground ml-1 font-normal">
+                  （{mapPoints.length} 個地點）
+                </span>
+              </span>
+              {mapOpen ? (
+                <ChevronUp className="text-muted-foreground size-4" aria-hidden />
+              ) : (
+                <ChevronDown
+                  className="text-muted-foreground size-4"
+                  aria-hidden
+                />
+              )}
+            </button>
+
+            {mapOpen ? (
+              <ActivityMap points={mapPoints} className="h-[45dvh] border-t" />
+            ) : null}
+          </section>
+        ) : null}
       </main>
 
       {canEdit ? (
@@ -200,7 +209,7 @@ export function DayView({
         dayId={currentDay.id}
         dayLabel={`Day ${currentDay.day_index}`}
         backlogActivities={backlogActivities}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onCreateNew={() => setCreateOpen(true)}
       />
 
@@ -210,7 +219,7 @@ export function DayView({
         onOpenChange={setCreateOpen}
         dayId={currentDay.id}
         tags={tags}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onSaved={() => router.refresh()}
       />
 
@@ -221,7 +230,7 @@ export function DayView({
         dayId={currentDay.id}
         activity={editing}
         tags={tags}
-        mapsEnabled={mapsEnabled}
+        placeSearchEnabled={placeSearchEnabled}
         onSaved={() => router.refresh()}
       />
 

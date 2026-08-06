@@ -49,7 +49,7 @@ type Props = {
   /** 有值代表編輯既有行程 */
   activity?: ActivityWithRelations | null
   tags: TagRow[]
-  mapsEnabled: boolean
+  placeSearchEnabled: boolean
   onSaved?: () => void
 }
 
@@ -108,7 +108,7 @@ export function ActivityFormSheet({
   dayId,
   activity,
   tags,
-  mapsEnabled,
+  placeSearchEnabled,
   onSaved,
 }: Props) {
   return (
@@ -131,7 +131,7 @@ export function ActivityFormSheet({
             dayId={dayId}
             activity={activity}
             tags={tags}
-            mapsEnabled={mapsEnabled}
+            placeSearchEnabled={placeSearchEnabled}
             onOpenChange={onOpenChange}
             onSaved={onSaved}
           />
@@ -145,7 +145,7 @@ function ActivityFormBody({
   dayId,
   activity,
   tags,
-  mapsEnabled,
+  placeSearchEnabled,
   onOpenChange,
   onSaved,
 }: Omit<Props, 'open'>) {
@@ -259,7 +259,7 @@ function ActivityFormBody({
     >
           <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
             {/* 地點搜尋：放最上面，因為選了地點就能自動帶入標題與座標 */}
-            {mapsEnabled ? (
+            {placeSearchEnabled ? (
               <div className="space-y-2">
                 <Label>地點</Label>
                 {form.placeName || form.address ? (
@@ -292,7 +292,7 @@ function ActivityFormBody({
                     </Button>
                   </div>
                 ) : searchOpen ? (
-                  <PlaceSearch onSelect={applyPlace} />
+                  <PlaceSearch onSelect={applyPlace} enabled={placeSearchEnabled} />
                 ) : (
                   <Button
                     type="button"

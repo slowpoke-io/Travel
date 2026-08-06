@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { DayView } from '@/components/trip/day-view'
 import { TripShell } from '@/components/trip/trip-shell'
-import { isMapsEnabled } from '@/lib/env'
+import { isPlaceSearchEnabled } from '@/lib/env'
 import { findDay, getShareTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
 
@@ -26,7 +26,6 @@ export default async function SharedDayPage({
       access={access}
       title={bundle.trip.title}
       currentDayIndex={index}
-      mapsEnabled={isMapsEnabled()}
     >
       <DayView
         days={bundle.days}
@@ -35,7 +34,7 @@ export default async function SharedDayPage({
         backlogActivities={vm.backlog}
         tags={bundle.tags}
         counts={vm.counts}
-        mapsEnabled={isMapsEnabled()}
+        placeSearchEnabled={isPlaceSearchEnabled()}
       />
     </TripShell>
   )

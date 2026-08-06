@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useMapsLibrary } from '@vis.gl/react-google-maps'
-import { Search } from 'lucide-react'
+import { Search, TriangleAlert } from 'lucide-react'
+
+import { useGooglePlaces } from '@/lib/use-google-places'
 
 export type PlaceResult = {
   placeName: string
@@ -15,20 +16,24 @@ export type PlaceResult = {
 /**
  * Google Places 地點搜尋。
  *
- * 使用新版的 `PlaceAutocompleteElement`（web component）—— 舊的
- * `google.maps.places.Autocomplete` 自 2025-03-01 起不再開放新客戶使用。
+ * 地圖顯示改用 Leaflet 之後，Google 在這個 App 只負責兩件事：
+ * 這裡的地點搜尋（自動帶入名稱、地址與座標）以及外部導航連結。
  *
- * 搜尋選定後會自動帶入名稱、地址與座標，使用者不需要手動查經緯度。
+ * 使用新版的 `PlaceAutocompleteElement`（web component）——
+ * 舊的 `google.maps.places.Autocomplete` 自 2025-03-01 起不再開放新客戶使用。
  */
 export function PlaceSearch({
   onSelect,
+  enabled,
   placeholder = '搜尋地點，例如「淺草寺」',
 }: {
   onSelect: (place: PlaceResult) => void
+  enabled: boolean
   placeholder?: string
 }) {
-  const placesLib = useMapsLibrary('places')
+  const state = useGooglePlaces(enabled)
   const containerRef = useRef<HTMLDivElement>(null)
+
   // 用 ref 保存最新的 callback，避免 element 因為 callback 每次都是新函式而重建
   const onSelectRef = useRef(onSelect)
   useEffect(() => {
@@ -36,16 +41,14 @@ export function PlaceSearch({
   }, [onSelect])
 
   useEffect(() => {
-    if (!placesLib || !containerRef.current) return
+    if (state !== 'ready' || !containerRef.current) return
 
     const container = containerRef.current
-    // 型別定義尚未涵蓋這個新的 web component
     const Element = (
-      placesLib as unknown as {
+      google.maps.places as unknown as {
         PlaceAutocompleteElement: new (opts?: object) => HTMLElement
       }
     ).PlaceAutocompleteElement
-
     if (!Element) return
 
     const element = new Element()
@@ -67,7 +70,6 @@ export function PlaceSearch({
           }
         }
       ).placePrediction
-
       if (!prediction) return
 
       const place = prediction.toPlace()
@@ -78,6 +80,7 @@ export function PlaceSearch({
       onSelectRef.current({
         placeName: place.displayName ?? '',
         address: place.formattedAddress ?? null,
+        // 座標仍然由 Google 提供（Leaflet 只負責把它畫出來）
         lat: place.location?.lat() ?? null,
         lng: place.location?.lng() ?? null,
         googlePlaceId: place.id ?? null,
@@ -89,9 +92,21 @@ export function PlaceSearch({
       element.removeEventListener('gmp-select', handleSelect)
       container.replaceChildren()
     }
-  }, [placesLib, placeholder])
+  }, [state, placeholder])
 
-  if (!placesLib) {
+  if (state === 'error') {
+    return (
+      <div className="text-muted-foreground flex items-start gap-2 rounded-md border border-dashed px-3 py-2.5 text-xs">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <span>
+          地點搜尋需要 Google Maps 金鑰。可以先手動輸入名稱與地址，
+          之後補上金鑰就能自動帶入座標。
+        </span>
+      </div>
+    )
+  }
+
+  if (state !== 'ready') {
     return (
       <div className="text-muted-foreground flex h-11 items-center gap-2 rounded-md border px-3 text-sm">
         <Search className="size-4 animate-pulse" aria-hidden />
