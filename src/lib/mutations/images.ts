@@ -111,9 +111,10 @@ export async function commitImages(
     .order('position', { ascending: false })
     .limit(1)
 
-  const { data: last } = await (activityId
-    ? existing.eq('activity_id', activityId)
-    : existing.is('activity_id', null)
+  const { data: last } = await (
+    activityId
+      ? existing.eq('activity_id', activityId)
+      : existing.is('activity_id', null)
   ).maybeSingle()
 
   let position = last ? last.position + 1 : 0

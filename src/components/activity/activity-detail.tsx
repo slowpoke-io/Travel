@@ -75,7 +75,9 @@ export function ActivityDetail({
             />
             <Link
               href={
-                currentDay ? `${base}/d/${currentDay.day_index}` : `${base}/backlog`
+                currentDay
+                  ? `${base}/d/${currentDay.day_index}`
+                  : `${base}/backlog`
               }
               aria-label="返回"
               className="pt-safe absolute top-2 left-2 flex size-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur"
@@ -144,9 +146,7 @@ export function ActivityDetail({
                 className="text-muted-foreground hover:text-foreground mt-3 inline-flex items-center gap-1 text-xs underline underline-offset-4"
               >
                 目前在
-                {currentDay
-                  ? `：Day ${currentDay.day_index}`
-                  : '：行程儲備區'}
+                {currentDay ? `：Day ${currentDay.day_index}` : '：行程儲備區'}
                 　移動到…
               </button>
             ) : null}
@@ -173,7 +173,12 @@ export function ActivityDetail({
                   所以不能跟地圖元件一樣被 placeSearchEnabled 擋住。
                 */}
                 <div className="mt-3 flex gap-2 pl-6">
-                  <Button asChild variant="outline" size="sm" className="gap-1.5">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                  >
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}${
                         activity.google_place_id
@@ -187,7 +192,12 @@ export function ActivityDetail({
                       在地圖開啟
                     </a>
                   </Button>
-                  <Button asChild variant="outline" size="sm" className="gap-1.5">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                  >
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mapsQuery)}`}
                       target="_blank"

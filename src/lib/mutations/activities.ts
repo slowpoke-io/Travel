@@ -81,9 +81,10 @@ export async function createActivity(
     .order('position', { ascending: false })
     .limit(1)
 
-  const { data: last, error: posErr } = await (dayId === null
-    ? positionQuery.is('day_id', null)
-    : positionQuery.eq('day_id', dayId)
+  const { data: last, error: posErr } = await (
+    dayId === null
+      ? positionQuery.is('day_id', null)
+      : positionQuery.eq('day_id', dayId)
   ).maybeSingle()
 
   if (posErr) throw posErr

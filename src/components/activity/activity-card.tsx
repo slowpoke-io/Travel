@@ -7,6 +7,7 @@ import {
   Clock,
   ExternalLink,
   ImagePlus,
+  Loader2,
   MapPin,
   MoreVertical,
   Pencil,
@@ -87,10 +88,20 @@ export function ActivityCard({
   return (
     <article
       className={cn(
-        'bg-card overflow-hidden rounded-xl border',
-        pending && 'opacity-50',
+        'bg-card relative overflow-hidden rounded-xl border transition-opacity',
+        pending && 'opacity-60',
       )}
     >
+      {/* 刪除中：蓋一層並顯示轉圈，讓人知道是在處理而不是卡住 */}
+      {pending ? (
+        <div className="bg-background/40 absolute inset-0 z-10 flex items-center justify-center">
+          <Loader2
+            className="text-foreground size-5 animate-spin"
+            aria-hidden
+          />
+        </div>
+      ) : null}
+
       <div className="flex">
         {order !== undefined ? (
           <div className="flex w-11 shrink-0 justify-center pt-4">
@@ -174,11 +185,17 @@ export function ActivityCard({
               ) : null}
             </Link>
 
-            {coverUrl ? (
-              <Link
-                href={`${base}/a/${activity.id}`}
-                className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-lg"
-              >
+            {/*
+              縮圖的位置一律保留。沒有圖時改放分類色塊，
+              否則有圖與沒圖的卡片高度不一樣，列表看起來會參差不齊。
+            */}
+            <Link
+              href={`${base}/a/${activity.id}`}
+              aria-hidden
+              tabIndex={-1}
+              className="bg-muted relative size-20 shrink-0 overflow-hidden rounded-lg"
+            >
+              {coverUrl ? (
                 <Image
                   src={coverUrl}
                   alt=""
@@ -186,8 +203,19 @@ export function ActivityCard({
                   sizes="80px"
                   className="object-cover"
                 />
-              </Link>
-            ) : null}
+              ) : (
+                <span
+                  className="flex size-full items-center justify-center"
+                  style={{ backgroundColor: `${meta.marker}1a` }}
+                >
+                  <CategoryIcon
+                    className="size-7 opacity-40"
+                    style={{ color: meta.marker }}
+                    aria-hidden
+                  />
+                </span>
+              )}
+            </Link>
 
             {canEdit ? (
               <DropdownMenu>

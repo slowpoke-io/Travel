@@ -11,10 +11,17 @@ import { cn } from '@/lib/utils'
  * 旅遊內的底部導覽。手機優先，所有按鈕高度 ≥ 56px，
  * 並保留 iPhone home indicator 的安全區。
  */
-export function BottomNav({ currentDayIndex }: { currentDayIndex: number }) {
+export function BottomNav() {
   const pathname = usePathname()
   const base = useBasePath()
   const access = useTripAccess()
+
+  /*
+    自己從網址推導目前是第幾天，而不是由外層傳入。
+    這樣 TripShell 就能放進 layout —— 切換頁面時外框留在原地不重繪，
+    只有內容區換成骨架，體感順很多。
+  */
+  const currentDayIndex = Number(pathname.match(/\/d\/(\d+)/)?.[1] ?? 1)
 
   const items = [
     {

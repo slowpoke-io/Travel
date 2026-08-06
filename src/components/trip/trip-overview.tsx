@@ -96,14 +96,20 @@ export function TripOverview({
             href={`${base}/backlog`}
             className="bg-muted/60 active:bg-muted flex items-center gap-3 rounded-xl border p-4"
           >
-            <Inbox className="text-muted-foreground size-5 shrink-0" aria-hidden />
+            <Inbox
+              className="text-muted-foreground size-5 shrink-0"
+              aria-hidden
+            />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">行程儲備區</span>
               <span className="text-muted-foreground block text-xs">
                 {backlogCount} 個想去的地方還沒排進行程
               </span>
             </span>
-            <ChevronRight className="text-muted-foreground size-4" aria-hidden />
+            <ChevronRight
+              className="text-muted-foreground size-4"
+              aria-hidden
+            />
           </Link>
         </section>
       ) : null}

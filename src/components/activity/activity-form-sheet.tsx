@@ -218,7 +218,10 @@ function ActivityFormBody({
             {
               activityId,
               role: 'info',
-              roles: resolvePendingRoles(pendingImages.length, hasExistingCover),
+              roles: resolvePendingRoles(
+                pendingImages.length,
+                hasExistingCover,
+              ),
             },
           )
         }
@@ -235,292 +238,289 @@ function ActivityFormBody({
       onSubmit={submit}
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-          <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
-            {/* 地點搜尋：放最上面，因為選了地點就能自動帶入標題與座標 */}
-            {placeSearchEnabled ? (
-              <div className="space-y-2">
-                <Label>地點</Label>
-                {form.placeName || form.address ? (
-                  <div className="bg-muted flex items-start gap-2 rounded-lg p-3">
-                    <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {form.placeName || '（未命名地點）'}
-                      </p>
-                      {form.address ? (
-                        <p className="text-muted-foreground text-xs">
-                          {form.address}
-                        </p>
-                      ) : null}
-                      {form.lat === null ? (
-                        <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
-                          沒有座標，不會顯示在地圖上
-                        </p>
-                      ) : null}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 shrink-0"
-                      onClick={clearPlace}
-                      aria-label="清除地點"
-                    >
-                      <X className="size-4" aria-hidden />
-                    </Button>
-                  </div>
-                ) : (
-                  /*
+      <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
+        {/* 地點搜尋：放最上面，因為選了地點就能自動帶入標題與座標 */}
+        {placeSearchEnabled ? (
+          <div className="space-y-2">
+            <Label>地點</Label>
+            {form.placeName || form.address ? (
+              <div className="bg-muted flex items-start gap-2 rounded-lg p-3">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {form.placeName || '（未命名地點）'}
+                  </p>
+                  {form.address ? (
+                    <p className="text-muted-foreground text-xs">
+                      {form.address}
+                    </p>
+                  ) : null}
+                  {form.lat === null ? (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                      沒有座標，不會顯示在地圖上
+                    </p>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0"
+                  onClick={clearPlace}
+                  aria-label="清除地點"
+                >
+                  <X className="size-4" aria-hidden />
+                </Button>
+              </div>
+            ) : (
+              /*
                     直接顯示搜尋框，不要再包一層「搜尋地點」按鈕。
                     包按鈕的話要點兩次（先展開、再聚焦）才能開始打字，而且
                     Google 的 script 要等展開後才開始載入，第一次點下去往往
                     還沒就緒。直接渲染的話表單一開啟就開始載入。
                   */
-                  <PlaceSearch
-                    onSelect={applyPlace}
-                    enabled={placeSearchEnabled}
-                  />
-                )}
-              </div>
-            ) : null}
+              <PlaceSearch onSelect={applyPlace} enabled={placeSearchEnabled} />
+            )}
+          </div>
+        ) : null}
 
-            <div className="space-y-2">
-              <Label htmlFor="act-title">行程名稱</Label>
-              <Input
-                id="act-title"
-                value={form.title}
-                onChange={(e) => set('title', e.target.value)}
-                placeholder="例：淺草寺"
-                maxLength={200}
-                required
-                className="h-11 text-base"
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="act-title">行程名稱</Label>
+          <Input
+            id="act-title"
+            value={form.title}
+            onChange={(e) => set('title', e.target.value)}
+            placeholder="例：淺草寺"
+            maxLength={200}
+            required
+            className="h-11 text-base"
+          />
+        </div>
 
-            <div className="space-y-2">
-              <Label>分類</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {CATEGORIES.map((cat) => {
-                  const Icon = cat.icon
-                  const active = form.category === cat.value
-                  return (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => set('category', cat.value)}
-                      aria-pressed={active}
-                      className={`flex h-16 flex-col items-center justify-center gap-1 rounded-lg border text-xs transition-colors ${
-                        active
-                          ? 'border-foreground bg-muted font-medium'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      <Icon className="size-5" aria-hidden />
-                      {cat.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+        <div className="space-y-2">
+          <Label>分類</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon
+              const active = form.category === cat.value
+              return (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => set('category', cat.value)}
+                  aria-pressed={active}
+                  className={`flex h-16 flex-col items-center justify-center gap-1 rounded-lg border text-xs transition-colors ${
+                    active
+                      ? 'border-foreground bg-muted font-medium'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  {cat.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-            {/*
+        {/*
               重要時間。不是排時刻表，而是記下「你無法控制」的時間：
               班機、訂位、時段票、末班車。所以做成可命名的清單而不是單一
               欄位 —— 一個行程可能同時有起飛和抵達兩個時間。
             */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>重要時間</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    set('times', [...form.times, { label: '', time: '' }])
-                  }
-                >
-                  <Plus className="size-4" aria-hidden />
-                  加一個
-                </Button>
-              </div>
-
-              {form.times.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
-                  班機、訂位、時段票、末班車…… 這些錯過會有代價的時間。
-                  一般行程不用填，靠順序就好。
-                </p>
-              ) : null}
-
-              {form.times.map((entry, index) => (
-                <div key={index} className="space-y-1.5">
-                  <div className="flex gap-2">
-                    <Input
-                      value={entry.label}
-                      onChange={(e) => {
-                        const next = [...form.times]
-                        next[index] = { ...entry, label: e.target.value }
-                        set('times', next)
-                      }}
-                      placeholder="名稱"
-                      maxLength={20}
-                      className="h-10 w-24 shrink-0"
-                    />
-                    <Input
-                      type="time"
-                      value={entry.time}
-                      onChange={(e) => {
-                        const next = [...form.times]
-                        next[index] = { ...entry, time: e.target.value }
-                        set('times', next)
-                      }}
-                      className="h-10 text-base"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-10 shrink-0"
-                      aria-label="移除這個時間"
-                      onClick={() =>
-                        set(
-                          'times',
-                          form.times.filter((_, i) => i !== index),
-                        )
-                      }
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </Button>
-                  </div>
-
-                  {/* 名稱還沒填時給幾個常見的，點一下帶入 */}
-                  {!entry.label ? (
-                    <div className="flex flex-wrap gap-1 pl-0.5">
-                      {TIME_LABEL_SUGGESTIONS.map((label) => (
-                        <button
-                          key={label}
-                          type="button"
-                          onClick={() => {
-                            const next = [...form.times]
-                            next[index] = { ...entry, label }
-                            set('times', next)
-                          }}
-                          className="text-muted-foreground hover:text-foreground rounded-full border border-dashed px-2 py-0.5 text-[11px]"
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label>標籤</Label>
-              <TagPicker
-                tags={localTags}
-                selected={form.tagIds}
-                onChange={(ids) => set('tagIds', ids)}
-                onTagCreated={(tag) =>
-                  setLocalTags((prev) => [
-                    ...prev,
-                    {
-                      id: tag.id,
-                      name: tag.name,
-                      color: tag.color,
-                      trip_id: '',
-                      created_at: '',
-                    },
-                  ])
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>連結</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    set('links', [...form.links, { label: '', url: '' }])
-                  }
-                >
-                  <Plus className="size-4" aria-hidden />
-                  加一個
-                </Button>
-              </div>
-              {form.links.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
-                  官網、訂位頁面、參考文章…
-                </p>
-              ) : null}
-              {form.links.map((link, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={link.label}
-                    onChange={(e) => {
-                      const next = [...form.links]
-                      next[index] = { ...link, label: e.target.value }
-                      set('links', next)
-                    }}
-                    placeholder="標題"
-                    maxLength={40}
-                    className="h-10 w-24 shrink-0"
-                  />
-                  <Input
-                    value={link.url}
-                    onChange={(e) => {
-                      const next = [...form.links]
-                      next[index] = { ...link, url: e.target.value }
-                      set('links', next)
-                    }}
-                    placeholder="https://"
-                    inputMode="url"
-                    className="h-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-10 shrink-0"
-                    aria-label="移除這個連結"
-                    onClick={() =>
-                      set(
-                        'links',
-                        form.links.filter((_, i) => i !== index),
-                      )
-                    }
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label>圖片</Label>
-              <PendingImagePicker
-                images={pendingImages}
-                onChange={setPendingImages}
-                hasExistingCover={hasExistingCover}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="act-notes">備註</Label>
-              <Textarea
-                id="act-notes"
-                value={form.notes}
-                onChange={(e) => set('notes', e.target.value)}
-                placeholder="訂位編號、開放時間、要注意的事…"
-                rows={4}
-                maxLength={5000}
-                className="text-base"
-              />
-            </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>重要時間</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                set('times', [...form.times, { label: '', time: '' }])
+              }
+            >
+              <Plus className="size-4" aria-hidden />
+              加一個
+            </Button>
           </div>
+
+          {form.times.length === 0 ? (
+            <p className="text-muted-foreground text-xs">
+              班機、訂位、時段票、末班車…… 這些錯過會有代價的時間。
+              一般行程不用填，靠順序就好。
+            </p>
+          ) : null}
+
+          {form.times.map((entry, index) => (
+            <div key={index} className="space-y-1.5">
+              <div className="flex gap-2">
+                <Input
+                  value={entry.label}
+                  onChange={(e) => {
+                    const next = [...form.times]
+                    next[index] = { ...entry, label: e.target.value }
+                    set('times', next)
+                  }}
+                  placeholder="名稱"
+                  maxLength={20}
+                  className="h-10 w-24 shrink-0"
+                />
+                <Input
+                  type="time"
+                  value={entry.time}
+                  onChange={(e) => {
+                    const next = [...form.times]
+                    next[index] = { ...entry, time: e.target.value }
+                    set('times', next)
+                  }}
+                  className="h-10 text-base"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 shrink-0"
+                  aria-label="移除這個時間"
+                  onClick={() =>
+                    set(
+                      'times',
+                      form.times.filter((_, i) => i !== index),
+                    )
+                  }
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </div>
+
+              {/* 名稱還沒填時給幾個常見的，點一下帶入 */}
+              {!entry.label ? (
+                <div className="flex flex-wrap gap-1 pl-0.5">
+                  {TIME_LABEL_SUGGESTIONS.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        const next = [...form.times]
+                        next[index] = { ...entry, label }
+                        set('times', next)
+                      }}
+                      className="text-muted-foreground hover:text-foreground rounded-full border border-dashed px-2 py-0.5 text-[11px]"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <Label>標籤</Label>
+          <TagPicker
+            tags={localTags}
+            selected={form.tagIds}
+            onChange={(ids) => set('tagIds', ids)}
+            onTagCreated={(tag) =>
+              setLocalTags((prev) => [
+                ...prev,
+                {
+                  id: tag.id,
+                  name: tag.name,
+                  color: tag.color,
+                  trip_id: '',
+                  created_at: '',
+                },
+              ])
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>連結</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                set('links', [...form.links, { label: '', url: '' }])
+              }
+            >
+              <Plus className="size-4" aria-hidden />
+              加一個
+            </Button>
+          </div>
+          {form.links.length === 0 ? (
+            <p className="text-muted-foreground text-xs">
+              官網、訂位頁面、參考文章…
+            </p>
+          ) : null}
+          {form.links.map((link, index) => (
+            <div key={index} className="flex gap-2">
+              <Input
+                value={link.label}
+                onChange={(e) => {
+                  const next = [...form.links]
+                  next[index] = { ...link, label: e.target.value }
+                  set('links', next)
+                }}
+                placeholder="標題"
+                maxLength={40}
+                className="h-10 w-24 shrink-0"
+              />
+              <Input
+                value={link.url}
+                onChange={(e) => {
+                  const next = [...form.links]
+                  next[index] = { ...link, url: e.target.value }
+                  set('links', next)
+                }}
+                placeholder="https://"
+                inputMode="url"
+                className="h-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-10 shrink-0"
+                aria-label="移除這個連結"
+                onClick={() =>
+                  set(
+                    'links',
+                    form.links.filter((_, i) => i !== index),
+                  )
+                }
+              >
+                <Trash2 className="size-4" aria-hidden />
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <Label>圖片</Label>
+          <PendingImagePicker
+            images={pendingImages}
+            onChange={setPendingImages}
+            hasExistingCover={hasExistingCover}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="act-notes">備註</Label>
+          <Textarea
+            id="act-notes"
+            value={form.notes}
+            onChange={(e) => set('notes', e.target.value)}
+            placeholder="訂位編號、開放時間、要注意的事…"
+            rows={4}
+            maxLength={5000}
+            className="text-base"
+          />
+        </div>
+      </div>
 
       <div className="pb-safe border-t px-4 py-3">
         <Button

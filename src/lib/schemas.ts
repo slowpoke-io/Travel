@@ -55,10 +55,10 @@ export const tripInputSchema = z
     timezone: trimmed(64).default('Asia/Taipei'),
     summary: trimmed(2000).nullable().optional(),
   })
-  .refine(
-    (v) => !v.start_date || !v.end_date || v.end_date >= v.start_date,
-    { message: '結束日期不能早於開始日期', path: ['end_date'] },
-  )
+  .refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, {
+    message: '結束日期不能早於開始日期',
+    path: ['end_date'],
+  })
   .refine(
     (v) => {
       if (!v.start_date || !v.end_date) return true

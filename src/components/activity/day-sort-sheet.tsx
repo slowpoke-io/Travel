@@ -23,7 +23,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronDown, ChevronUp, GripVertical, Inbox, Loader2 } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Inbox,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -186,65 +192,64 @@ export function DaySortSheet({
         </Button>
       }
     >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis]}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <SortableList
+            containerId={DAY}
+            ids={items[DAY]}
+            byId={byId}
+            emptyHint="這一天還沒有行程。從下方儲備區拖上來，或關閉排序後新增。"
+          />
+        </div>
 
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="bg-background border-t">
+          <button
+            type="button"
+            onClick={() => setBacklogOpen((v) => !v)}
+            className="hover:bg-muted/50 flex h-12 w-full items-center gap-2 px-4 text-sm font-medium"
+          >
+            <Inbox className="size-4" aria-hidden />
+            儲備區
+            <span className="text-muted-foreground">
+              （{items[BACKLOG].length}）
+            </span>
+            <span className="text-muted-foreground ml-auto">
+              {backlogOpen ? (
+                <ChevronDown className="size-4" aria-hidden />
+              ) : (
+                <ChevronUp className="size-4" aria-hidden />
+              )}
+            </span>
+          </button>
+
+          <div
+            className={cn(
+              'overflow-y-auto overscroll-contain transition-[height]',
+              backlogOpen ? 'h-[35dvh]' : 'h-16',
+            )}
+          >
             <SortableList
-              containerId={DAY}
-              ids={items[DAY]}
+              containerId={BACKLOG}
+              ids={items[BACKLOG]}
               byId={byId}
-              emptyHint="這一天還沒有行程。從下方儲備區拖上來，或關閉排序後新增。"
+              emptyHint="把行程拖到這裡可以先暫存起來。"
             />
           </div>
+        </div>
 
-          <div className="bg-background border-t">
-            <button
-              type="button"
-              onClick={() => setBacklogOpen((v) => !v)}
-              className="hover:bg-muted/50 flex h-12 w-full items-center gap-2 px-4 text-sm font-medium"
-            >
-              <Inbox className="size-4" aria-hidden />
-              儲備區
-              <span className="text-muted-foreground">
-                （{items[BACKLOG].length}）
-              </span>
-              <span className="text-muted-foreground ml-auto">
-                {backlogOpen ? (
-                  <ChevronDown className="size-4" aria-hidden />
-                ) : (
-                  <ChevronUp className="size-4" aria-hidden />
-                )}
-              </span>
-            </button>
-
-            <div
-              className={cn(
-                'overflow-y-auto overscroll-contain transition-[height]',
-                backlogOpen ? 'h-[35dvh]' : 'h-16',
-              )}
-            >
-              <SortableList
-                containerId={BACKLOG}
-                ids={items[BACKLOG]}
-                byId={byId}
-                emptyHint="把行程拖到這裡可以先暫存起來。"
-              />
-            </div>
-          </div>
-
-          <DragOverlay>
-            {activeActivity ? (
-              <SortRow activity={activeActivity} index={0} dragging />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        <DragOverlay>
+          {activeActivity ? (
+            <SortRow activity={activeActivity} index={0} dragging />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <p className="text-muted-foreground pb-safe border-t px-4 py-2 text-center text-xs">
         按住左側 ⣿ 把手拖曳排序，可跨區搬到儲備區
@@ -301,8 +306,14 @@ function SortableRow({
   activity: ActivityWithRelations
   index: number
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: activity.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: activity.id })
 
   return (
     <li

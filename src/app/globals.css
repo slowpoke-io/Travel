@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -180,6 +180,19 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+/* 日期分頁被點下、新頁面還沒畫出來時的來回進度條 */
+@keyframes tab-loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+.animate-tab-loading {
+  animation: tab-loading 0.9s ease-in-out infinite;
 }
 
 /*

@@ -54,6 +54,8 @@ export function BacklogView({
   const [imageTarget, setImageTarget] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
+  /** 正在指派中的 `${activityId}:${dayId}`，讓被點的那顆 chip 自己顯示等待 */
+  const [assigning, setAssigning] = useState<string | null>(null)
 
   const filters = useMemo(
     () => parseFilters(new URLSearchParams(searchParams.toString())),
@@ -69,8 +71,10 @@ export function BacklogView({
   )
 
   function assign(activityIds: string[], dayId: string, label: string) {
+    setAssigning(`${activityIds[0]}:${dayId}`)
     startTransition(async () => {
       const result = await mutations.moveActivities(activityIds, dayId)
+      setAssigning(null)
       if (!result.ok) {
         toast.error('指派失敗', { description: result.error })
         return
@@ -160,12 +164,13 @@ export function BacklogView({
                         days={quickDays}
                         hasMore={hasMoreDays}
                         disabled={pending}
+                        assigningDayId={
+                          assigning?.startsWith(`${activity.id}:`)
+                            ? assigning.split(':')[1]
+                            : null
+                        }
                         onAssign={(day) =>
-                          assign(
-                            [activity.id],
-                            day.id,
-                            `Day ${day.day_index}`,
-                          )
+                          assign([activity.id], day.id, `Day ${day.day_index}`)
                         }
                         onMore={() => setMoving([activity.id])}
                       />
@@ -180,7 +185,7 @@ export function BacklogView({
 
       {/* 多選模式的批次操作列 */}
       {selectMode && selected.length > 0 ? (
-        <div className="bg-background fixed inset-x-0 bottom-above-nav z-30 mx-auto max-w-md border-t px-4 py-3">
+        <div className="bg-background bottom-above-nav fixed inset-x-0 z-30 mx-auto max-w-md border-t px-4 py-3">
           <div className="flex items-center gap-2">
             <p className="flex-1 text-sm font-medium">
               已選 {selected.length} 個
@@ -201,7 +206,7 @@ export function BacklogView({
       ) : null}
 
       {canEdit && !selectMode ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-above-nav z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
+        <div className="bottom-above-nav pointer-events-none fixed inset-x-0 z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
           <Button
             size="lg"
             onClick={() => setAddOpen(true)}
@@ -253,9 +258,9 @@ export function BacklogView({
         onOpenChange={(open) => !open && setImageTarget(null)}
         hasCover={Boolean(
           imageTarget &&
-            backlogActivities
-              .find((a) => a.id === imageTarget)
-              ?.images.some((i) => i.role === 'cover'),
+          backlogActivities
+            .find((a) => a.id === imageTarget)
+            ?.images.some((i) => i.role === 'cover'),
         )}
       />
     </>
@@ -272,31 +277,45 @@ function QuickAssignRow({
   days,
   hasMore,
   disabled,
+  assigningDayId,
   onAssign,
   onMore,
 }: {
   days: TripDayRow[]
   hasMore: boolean
   disabled: boolean
+  /** 正在指派到哪一天；那顆 chip 會顯示轉圈 */
+  assigningDayId: string | null
   onAssign: (day: TripDayRow) => void
   onMore: () => void
 }) {
   return (
     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
       <span className="text-muted-foreground mr-0.5 text-[11px]">加到</span>
-      {days.map((day) => (
-        <button
-          key={day.id}
-          type="button"
-          disabled={disabled}
-          onClick={() => onAssign(day)}
-          className={cn(
-            'bg-muted active:bg-primary active:text-primary-foreground inline-flex h-7 min-w-9 items-center justify-center rounded-full px-2 text-xs font-medium transition-colors disabled:opacity-50',
-          )}
-        >
-          D{day.day_index}
-        </button>
-      ))}
+      {days.map((day) => {
+        const busy = assigningDayId === day.id
+        return (
+          <button
+            key={day.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onAssign(day)}
+            aria-busy={busy}
+            className={cn(
+              'bg-muted active:bg-primary active:text-primary-foreground inline-flex h-7 min-w-9 items-center justify-center rounded-full px-2 text-xs font-medium transition-colors',
+              // 只淡化沒被點的那些，被點的那顆保持清楚並顯示轉圈
+              disabled && !busy && 'opacity-40',
+              busy && 'bg-primary text-primary-foreground',
+            )}
+          >
+            {busy ? (
+              <Loader2 className="size-3 animate-spin" aria-hidden />
+            ) : (
+              `D${day.day_index}`
+            )}
+          </button>
+        )
+      })}
       {hasMore ? (
         <button
           type="button"

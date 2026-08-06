@@ -89,13 +89,16 @@ export type TagColor = (typeof TAG_COLORS)[number]
 const TAG_COLOR_CLASSES: Record<string, string> = {
   slate: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
   red: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200',
-  orange: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-200',
+  orange:
+    'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-200',
   amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
   green: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-200',
   teal: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-200',
   sky: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200',
-  indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200',
-  violet: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200',
+  indigo:
+    'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200',
+  violet:
+    'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200',
   pink: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-200',
 }
 

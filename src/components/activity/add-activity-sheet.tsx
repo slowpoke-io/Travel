@@ -118,9 +118,7 @@ export function AddActivitySheet({
             <>
               <DrawerHeader className="border-b py-3">
                 <DrawerTitle className="text-base">從儲備區挑選</DrawerTitle>
-                <DrawerDescription>
-                  勾選後一次加入 {dayLabel}
-                </DrawerDescription>
+                <DrawerDescription>勾選後一次加入 {dayLabel}</DrawerDescription>
               </DrawerHeader>
 
               <ul className="flex-1 overflow-y-auto overscroll-contain px-2 py-2">

@@ -70,9 +70,7 @@ export function TripForm({
 
   const nights =
     range?.from && range?.to
-      ? Math.round(
-          (range.to.getTime() - range.from.getTime()) / 86_400_000,
-        ) + 1
+      ? Math.round((range.to.getTime() - range.from.getTime()) / 86_400_000) + 1
       : range?.from
         ? 1
         : 0

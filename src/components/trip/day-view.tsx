@@ -173,7 +173,7 @@ export function DayView({
       </main>
 
       {canEdit ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-above-nav z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
+        <div className="bottom-above-nav pointer-events-none fixed inset-x-0 z-20 mx-auto flex max-w-md justify-end px-4 pb-3">
           <Button
             size="lg"
             onClick={startAdding}
@@ -244,10 +244,11 @@ export function DayView({
         onOpenChange={(open) => !open && setImageTarget(null)}
         hasCover={Boolean(
           imageTarget &&
-            (dayActivities.concat(backlogActivities).find(
-              (a) => a.id === imageTarget,
-            )?.images.some((i) => i.role === 'cover') ??
-              false),
+          (dayActivities
+            .concat(backlogActivities)
+            .find((a) => a.id === imageTarget)
+            ?.images.some((i) => i.role === 'cover') ??
+            false),
         )}
       />
     </>

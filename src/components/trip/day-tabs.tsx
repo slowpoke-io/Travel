@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { useEffect, useRef } from 'react'
 
 import { useBasePath } from '@/components/trip/trip-access'
@@ -46,22 +46,41 @@ export function DayTabs({
               href={`${base}/d/${day.day_index}`}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex min-w-[4.5rem] flex-col items-center rounded-lg px-3 py-2 text-center transition-colors',
+                'relative flex min-w-[4.5rem] flex-col items-center overflow-hidden rounded-lg px-3 py-2 text-center transition-colors',
                 active
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground active:bg-muted/70',
               )}
             >
-              <span className="text-sm font-semibold">
-                Day {day.day_index}
-              </span>
+              <span className="text-sm font-semibold">Day {day.day_index}</span>
               <span className="text-[11px] opacity-80">
                 {day.date ? formatDayLabel(day.date) : `${count} 個行程`}
               </span>
+              <TabPendingBar />
             </Link>
           )
         })}
       </div>
     </div>
+  )
+}
+
+/**
+ * 點下去到新頁面畫出來之間會有空窗（每一頁都是動態渲染），
+ * 沒有回饋的話會覺得「按了沒反應」。這條進度條讓點擊立刻有反應。
+ *
+ * 必須是 <Link> 的子孫元素，useLinkStatus 才讀得到狀態。
+ */
+function TabPendingBar() {
+  const { pending } = useLinkStatus()
+  if (!pending) return null
+
+  return (
+    <span
+      aria-hidden
+      className="bg-foreground/30 absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"
+    >
+      <span className="bg-foreground/70 animate-tab-loading block h-full w-1/2" />
+    </span>
   )
 }

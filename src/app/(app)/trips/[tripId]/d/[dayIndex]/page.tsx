@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 
 import { DayView } from '@/components/trip/day-view'
-import { TripShell } from '@/components/trip/trip-shell'
 import { isPlaceSearchEnabled } from '@/lib/env'
 import { findDay, getOwnerTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
@@ -25,25 +24,19 @@ export default async function DayPage({
   const index = Number(dayIndex)
   if (!Number.isInteger(index) || index < 1) notFound()
 
-  const { bundle, access } = await getOwnerTripContext(tripId)
+  const { bundle } = await getOwnerTripContext(tripId)
   const day = findDay(bundle, index)
   const vm = buildTripViewModel(bundle)
 
   return (
-    <TripShell
-      access={access}
-      title={bundle.trip.title}
-      currentDayIndex={index}
-    >
-      <DayView
-        days={bundle.days}
-        currentDay={day}
-        dayActivities={vm.byDay.get(day.id) ?? []}
-        backlogActivities={vm.backlog}
-        tags={bundle.tags}
-        counts={vm.counts}
-        placeSearchEnabled={isPlaceSearchEnabled()}
-      />
-    </TripShell>
+    <DayView
+      days={bundle.days}
+      currentDay={day}
+      dayActivities={vm.byDay.get(day.id) ?? []}
+      backlogActivities={vm.backlog}
+      tags={bundle.tags}
+      counts={vm.counts}
+      placeSearchEnabled={isPlaceSearchEnabled()}
+    />
   )
 }

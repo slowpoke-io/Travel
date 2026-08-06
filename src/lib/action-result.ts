@@ -5,8 +5,7 @@
  * 讓呼叫端能穩定處理，也避免把資料庫錯誤訊息原封不動吐給使用者。
  */
 export type ActionResult<T = undefined> =
-  | { ok: true; data: T }
-  | { ok: false; error: string }
+  { ok: true; data: T } | { ok: false; error: string }
 
 export function ok(): ActionResult<undefined>
 export function ok<T>(data: T): ActionResult<T>

@@ -6,12 +6,7 @@
  */
 
 export type ActivityCategory =
-  | 'sight'
-  | 'food'
-  | 'lodging'
-  | 'transport'
-  | 'shopping'
-  | 'other'
+  'sight' | 'food' | 'lodging' | 'transport' | 'shopping' | 'other'
 
 export type ImageRole = 'cover' | 'info' | 'record'
 

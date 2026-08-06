@@ -119,9 +119,7 @@ export function DayManager({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              刪除 Day {confirm?.day_index}？
-            </AlertDialogTitle>
+            <AlertDialogTitle>刪除 Day {confirm?.day_index}？</AlertDialogTitle>
             <AlertDialogDescription>
               {confirm && (counts[confirm.id] ?? 0) > 0
                 ? `這一天的 ${counts[confirm.id]} 個行程會退回「行程儲備區」，不會被刪除。之後的天數會往前遞補。`

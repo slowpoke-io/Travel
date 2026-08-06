@@ -33,7 +33,8 @@ export type MappedActivity = {
  * 兩者都不需要 API 金鑰。
  */
 const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  light:
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
 }
 const ATTRIBUTION =
@@ -150,11 +151,7 @@ export function LeafletMap({
         <Marker
           key={point.id}
           position={[point.lat, point.lng]}
-          icon={numberedIcon(
-            point.order,
-            point.color,
-            selectedId === point.id,
-          )}
+          icon={numberedIcon(point.order, point.color, selectedId === point.id)}
           title={point.title}
           eventHandlers={
             onSelect ? { click: () => onSelect(point.id) } : undefined

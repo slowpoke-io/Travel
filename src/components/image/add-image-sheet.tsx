@@ -83,7 +83,10 @@ export function AddImageSheet({
               key={role}
               className="flex items-center gap-3 rounded-lg border p-3"
             >
-              <Icon className="text-muted-foreground size-5 shrink-0" aria-hidden />
+              <Icon
+                className="text-muted-foreground size-5 shrink-0"
+                aria-hidden
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{label}</p>
                 <p className="text-muted-foreground text-xs">{hint}</p>

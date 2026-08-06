@@ -1,14 +1,14 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { ArrowLeft, Eye, PenLine } from "lucide-react";
+import Link from 'next/link'
+import { ArrowLeft, Eye, PenLine } from 'lucide-react'
 
-import { BottomNav } from "@/components/trip/bottom-nav";
+import { BottomNav } from '@/components/trip/bottom-nav'
 import {
   TripAccessProvider,
   type TripAccess,
-} from "@/components/trip/trip-access";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/trip/trip-access'
+import { Badge } from '@/components/ui/badge'
 
 /**
  * 旅遊內頁的外框：頂部標題列 + 底部導覽 + 存取模式 context。
@@ -18,15 +18,13 @@ import { Badge } from "@/components/ui/badge";
 export function TripShell({
   access,
   title,
-  currentDayIndex,
   children,
 }: {
-  access: TripAccess;
-  title: string;
-  currentDayIndex: number;
-  children: React.ReactNode;
+  access: TripAccess
+  title: string
+  children: React.ReactNode
 }) {
-  const isGuest = access.mode === "guest";
+  const isGuest = access.mode === 'guest'
 
   return (
     <TripAccessProvider value={access}>
@@ -72,8 +70,8 @@ export function TripShell({
 
         {children}
 
-        <BottomNav currentDayIndex={currentDayIndex} />
+        <BottomNav />
       </div>
     </TripAccessProvider>
-  );
+  )
 }

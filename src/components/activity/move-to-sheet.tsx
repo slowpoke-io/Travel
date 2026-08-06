@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Check, Inbox, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -48,14 +48,18 @@ export function MoveToSheet({
 }: Props) {
   const mutations = useTripMutations()
   const [pending, startTransition] = useTransition()
+  /** 正在搬去哪一個容器；只有那一列顯示等待 */
+  const [movingTo, setMovingTo] = useState<string | null>(null)
 
   function moveTo(targetDayId: string | null, label: string) {
     if (targetDayId === currentDayId) {
       onOpenChange(false)
       return
     }
+    setMovingTo(targetDayId ?? 'backlog')
     startTransition(async () => {
       const result = await mutations.moveActivities(activityIds, targetDayId)
+      setMovingTo(null)
       if (!result.ok) {
         toast.error('搬移失敗', { description: result.error })
         return
@@ -114,6 +118,10 @@ export function MoveToSheet({
                   className={cn(
                     'flex min-h-14 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
                     isCurrent ? 'bg-muted' : 'active:bg-muted',
+                    // 只淡化沒被點的，被點的那一列保持清楚
+                    pending &&
+                      movingTo !== (opt.id ?? 'backlog') &&
+                      'opacity-40',
                   )}
                 >
                   {opt.icon ? (
@@ -134,9 +142,9 @@ export function MoveToSheet({
                     <span className="text-muted-foreground shrink-0 text-xs">
                       目前位置
                     </span>
-                  ) : pending ? (
+                  ) : movingTo === (opt.id ?? 'backlog') ? (
                     <Loader2
-                      className="text-muted-foreground size-4 shrink-0 animate-spin"
+                      className="size-4 shrink-0 animate-spin"
                       aria-hidden
                     />
                   ) : (

@@ -2,7 +2,14 @@
 
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, Star, Trash2, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { getImageUrl } from '@/lib/image-url'
@@ -41,7 +48,10 @@ export function Lightbox({
   useEffect(() => {
     const track = trackRef.current
     if (!track) return
-    track.scrollTo({ left: track.clientWidth * startIndex, behavior: 'instant' })
+    track.scrollTo({
+      left: track.clientWidth * startIndex,
+      behavior: 'instant',
+    })
   }, [startIndex])
 
   // 鍵盤操作（桌機）
@@ -82,6 +92,10 @@ export function Lightbox({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
+      {/*
+        頂部只放關閉與頁碼。編輯動作全部移到底部 ——
+        擠在右上角既難按（單手拇指構不到）又雜亂。
+      */}
       <div className="pt-safe flex items-center justify-between px-2 py-2">
         <Button
           variant="ghost"
@@ -99,37 +113,7 @@ export function Lightbox({
           </span>
         ) : null}
 
-        {canEdit && current ? (
-          <div className="flex gap-1">
-            {current.role !== 'cover' ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={pending}
-                onClick={() => onMakeCover(current)}
-                className="gap-1.5 text-white hover:bg-white/10 hover:text-white"
-              >
-                {pending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : (
-                  <Star className="size-4" aria-hidden />
-                )}
-                設為封面
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(current)}
-              className="text-white hover:bg-white/10 hover:text-white"
-              aria-label="刪除圖片"
-            >
-              <Trash2 className="size-5" aria-hidden />
-            </Button>
-          </div>
-        ) : (
-          <span className="size-9" />
-        )}
+        <span className="size-9" />
       </div>
 
       <div className="relative min-h-0 flex-1">
@@ -171,10 +155,11 @@ export function Lightbox({
         ) : null}
       </div>
 
-      <div className="pb-safe px-4 py-3 text-center">
+      <div className="pb-safe px-4 py-3">
         {current?.caption ? (
-          <p className="text-sm text-white/80">{current.caption}</p>
+          <p className="text-center text-sm text-white/80">{current.caption}</p>
         ) : null}
+
         {images.length > 1 ? (
           <div className="mt-2 flex justify-center gap-1.5">
             {images.map((image, i) => (
@@ -186,6 +171,40 @@ export function Lightbox({
                 )}
               />
             ))}
+          </div>
+        ) : null}
+
+        {canEdit && current ? (
+          <div className="mt-3 flex gap-2">
+            {current.role !== 'cover' ? (
+              <Button
+                variant="secondary"
+                disabled={pending}
+                onClick={() => onMakeCover(current)}
+                className="h-11 flex-1 gap-2 border-0 bg-white/15 text-white hover:bg-white/25"
+              >
+                {pending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Star className="size-4" aria-hidden />
+                )}
+                設為封面
+              </Button>
+            ) : (
+              <span className="flex flex-1 items-center justify-center gap-1.5 text-sm text-white/60">
+                <Star className="size-4 fill-current" aria-hidden />
+                目前的封面
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              disabled={pending}
+              onClick={() => onDelete(current)}
+              aria-label="刪除這張圖片"
+              className="h-11 w-11 shrink-0 border-0 bg-white/15 text-white hover:bg-red-500/80"
+            >
+              <Trash2 className="size-4" aria-hidden />
+            </Button>
           </div>
         ) : null}
       </div>

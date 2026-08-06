@@ -14,7 +14,9 @@ export type PreparedImage = {
 const MAIN_MAX_PX = 1600
 const THUMB_MAX_PX = 400
 
-async function readSize(blob: Blob): Promise<{ width: number; height: number }> {
+async function readSize(
+  blob: Blob,
+): Promise<{ width: number; height: number }> {
   const bitmap = await createImageBitmap(blob)
   const size = { width: bitmap.width, height: bitmap.height }
   bitmap.close()

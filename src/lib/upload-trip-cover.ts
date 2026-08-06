@@ -2,10 +2,7 @@
 
 import { toast } from 'sonner'
 
-import {
-  commitImages,
-  requestUploadSlots,
-} from '@/actions/owner/images'
+import { commitImages, requestUploadSlots } from '@/actions/owner/images'
 import { STORAGE_BUCKET } from '@/lib/constants'
 import { prepareImage } from '@/lib/image-compress'
 import { createClient } from '@/lib/supabase/client'

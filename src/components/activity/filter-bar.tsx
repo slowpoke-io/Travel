@@ -5,10 +5,7 @@ import { useCallback, useMemo } from 'react'
 import { X } from 'lucide-react'
 
 import { CATEGORIES, tagColorClass } from '@/lib/constants'
-import type {
-  ActivityCategory,
-  TagRow,
-} from '@/lib/supabase/database.types'
+import type { ActivityCategory, TagRow } from '@/lib/supabase/database.types'
 import type { ActivityWithRelations } from '@/lib/queries'
 import { cn } from '@/lib/utils'
 
