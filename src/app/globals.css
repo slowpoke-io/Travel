@@ -183,6 +183,19 @@
 }
 
 /*
+ * Leaflet 內部的 pane 用 400～800 的 z-index，而地圖容器本身沒有建立
+ * stacking context，那些值會直接跟頁面上其他元素比較 —— 結果就是地圖蓋掉
+ * z-30 的底部導覽列與浮動按鈕。
+ *
+ * 給容器一個 z-index 讓它自成一個 stacking context，內部的 z-index 就被
+ * 關在裡面，不會外溢。
+ */
+.leaflet-container {
+  z-index: 0;
+  isolation: isolate;
+}
+
+/*
  * Leaflet 的 popup 與控制項自帶白底樣式，深色模式下會很突兀。
  * 這裡讓它們跟著 App 的主題色走。
  */

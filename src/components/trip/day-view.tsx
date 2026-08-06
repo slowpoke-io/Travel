@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
-import { ArrowUpDown, ChevronDown, ChevronUp, MapIcon, Plus } from 'lucide-react'
+import { ArrowUpDown, MapIcon, Plus } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activity/activity-card'
 import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
@@ -52,7 +52,6 @@ export function DayView({
   const searchParams = useSearchParams()
   const { canEdit } = useTripAccess()
 
-  const [mapOpen, setMapOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -125,7 +124,7 @@ export function DayView({
         ) : null}
       </div>
 
-      <main className="space-y-3 px-4 pb-40">
+      <main className="space-y-3 px-4 pb-24">
         {visible.length === 0 ? (
           <EmptyDay
             filtered={isFiltered}
@@ -156,36 +155,19 @@ export function DayView({
         {/*
           地圖放在行程列表之後。規劃時的主體是「當天要去哪些地方、順序如何」，
           地圖是輔助確認動線用的，佔住第一屏反而把行程擠下去。
-          預設收合成一條，需要時才展開。
         */}
         {mapPoints.length > 0 ? (
           <section className="overflow-hidden rounded-xl border">
-            <button
-              type="button"
-              onClick={() => setMapOpen((v) => !v)}
-              aria-expanded={mapOpen}
-              className="hover:bg-muted/50 flex h-11 w-full items-center gap-2 px-4 text-sm"
-            >
+            <div className="flex h-11 items-center gap-2 px-4 text-sm">
               <MapIcon className="text-muted-foreground size-4" aria-hidden />
-              <span className="flex-1 text-left font-medium">
+              <span className="font-medium">
                 地圖動線
                 <span className="text-muted-foreground ml-1 font-normal">
                   （{mapPoints.length} 個地點）
                 </span>
               </span>
-              {mapOpen ? (
-                <ChevronUp className="text-muted-foreground size-4" aria-hidden />
-              ) : (
-                <ChevronDown
-                  className="text-muted-foreground size-4"
-                  aria-hidden
-                />
-              )}
-            </button>
-
-            {mapOpen ? (
-              <ActivityMap points={mapPoints} className="h-[45dvh] border-t" />
-            ) : null}
+            </div>
+            <ActivityMap points={mapPoints} className="h-72 border-t" />
           </section>
         ) : null}
       </main>

@@ -122,7 +122,7 @@ export function BacklogView({
         ) : null}
       </div>
 
-      <main className="space-y-3 px-4 pb-40">
+      <main className="space-y-3 px-4 pb-24">
         {visible.length === 0 ? (
           <EmptyBacklog
             filtered={visible.length !== backlogActivities.length}
