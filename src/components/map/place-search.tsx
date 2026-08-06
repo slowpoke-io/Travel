@@ -94,13 +94,34 @@ export function PlaceSearch({
     }
   }, [state, placeholder])
 
-  if (state === 'error') {
+  if (state === 'no-key') {
     return (
       <div className="text-muted-foreground flex items-start gap-2 rounded-md border border-dashed px-3 py-2.5 text-xs">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         <span>
           地點搜尋需要 Google Maps 金鑰。可以先手動輸入名稱與地址，
           之後補上金鑰就能自動帶入座標。
+        </span>
+      </div>
+    )
+  }
+
+  /*
+    有金鑰但被 Google 拒絕。這跟「沒有金鑰」是完全不同的問題，訊息必須分開 ——
+    否則使用者會一直去找那把明明就存在的金鑰。
+  */
+  if (state === 'rejected') {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-dashed border-amber-500/40 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+        <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <span>
+          <strong className="font-medium">Google 拒絕了這把金鑰。</strong>
+          <br />
+          請到 Google Cloud Console 確認：Maps JavaScript API 與 Places API
+          (New) 都已「啟用」、金鑰的「API 限制」有包含這兩項、且「HTTP
+          參照網址限制」包含目前的網域。詳細錯誤在瀏覽器主控台。
+          <br />
+          在那之前可以先手動輸入名稱與地址。
         </span>
       </div>
     )
