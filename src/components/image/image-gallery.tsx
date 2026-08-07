@@ -16,7 +16,7 @@ import type { ImageRole, ImageRow } from '@/lib/supabase/database.types'
 import { useTripMutations } from '@/lib/use-trip-mutations'
 
 const TABS: { role: ImageRole; label: string; hint: string }[] = [
-  { role: 'cover', label: '封面', hint: '顯示在行程卡片上的代表圖' },
+  { role: 'cover', label: '封面', hint: '行程圖片' },
   { role: 'info', label: '資訊', hint: '票券、菜單、營業時間截圖' },
   { role: 'record', label: '紀錄', hint: '旅遊當下拍的照片' },
 ]
