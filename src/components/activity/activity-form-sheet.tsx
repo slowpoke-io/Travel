@@ -146,7 +146,12 @@ function ActivityFormBody({
 
   /*
     表單被關掉（而不是送出成功）時，把已經傳上去但沒用到的檔案刪掉。
-    送出成功的路徑會先呼叫 clear(false)，把清單清空，所以這裡不會誤刪。
+
+    送出成功的路徑會先呼叫 clear(false) 清空清單，所以這裡不會誤刪 ——
+    前提是那個清空要「同步」生效。usePendingUploads 內部的 itemsRef 因此
+    在每個操作中直接更新，而不是靠 effect 同步；否則「清空」與「關閉表單」
+    會被 React 批次成同一次 commit，同步用的 effect 來不及跑，這裡就會把
+    剛提交成功的檔案刪掉。
   */
   const uploadsRef = useRef(uploads)
   useEffect(() => {

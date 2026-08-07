@@ -1,5 +1,7 @@
 /**
- * 清理 Storage 中的孤兒圖片檔案。
+ * 清理兩種對不上的狀態：
+ *   1. 孤兒檔案 —— Storage 裡有，但沒有任何 images 資料列指向
+ *   2. 失效資料列 —— images 有，但檔案已經不在 Storage（畫面上會是破圖）
  *
  * 正常流程下，刪除圖片／行程／旅遊時都會一併刪掉檔案。這支腳本是保險：
  * 如果曾經發生「檔案已上傳但 commitImages 失敗」或刪除時網路中斷，
@@ -109,7 +111,57 @@ async function main() {
   console.log('清理完成。')
 }
 
-main().catch((e) => {
-  console.error(e)
-  process.exit(1)
-})
+/**
+ * 反向檢查：資料列還在，但檔案已經不見。
+ * 這種列在畫面上會變成破圖，使用者只能看著它卻不知道怎麼處理。
+ */
+async function findBrokenRows() {
+  const { data: rows, error } = await supabase
+    .from('images')
+    .select('id, path, thumb_path, role')
+  if (error) throw error
+
+  const broken: { id: string; path: string; role: string }[] = []
+  for (const row of rows ?? []) {
+    const fileUrl = `${url}/storage/v1/object/public/${BUCKET}/${row.path}`
+    const res = await fetch(fileUrl, { method: 'HEAD' })
+    if (res.status !== 200) {
+      broken.push({ id: row.id, path: row.path, role: row.role })
+    }
+  }
+  return broken
+}
+
+async function main2() {
+  console.log('\n檢查是否有「資料列還在但檔案不見」的情況…')
+  const broken = await findBrokenRows()
+  if (!broken.length) {
+    console.log('沒有失效的資料列。')
+    return
+  }
+
+  console.log(`\n找到 ${broken.length} 筆失效資料列（畫面上會是破圖）：`)
+  for (const b of broken) console.log(`  [${b.role}] ${b.path}`)
+
+  if (!shouldDelete) {
+    console.log('\n這是預覽模式。加上 --delete 才會真的刪除。')
+    return
+  }
+
+  const { error } = await supabase
+    .from('images')
+    .delete()
+    .in(
+      'id',
+      broken.map((b) => b.id),
+    )
+  if (error) throw error
+  console.log(`已刪除 ${broken.length} 筆失效資料列。`)
+}
+
+main()
+  .then(main2)
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })

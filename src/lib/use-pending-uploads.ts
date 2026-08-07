@@ -35,20 +35,43 @@ export function usePendingUploads(tripId: string | null) {
   const mutations = useTripMutations()
   const [items, setItems] = useState<PendingUpload[]>([])
 
-  // 卸載時釋放 object URL
-  const itemsRef = useRef(items)
-  useEffect(() => {
-    itemsRef.current = items
-  }, [items])
+  /*
+    itemsRef 是清單的權威來源，而且「同步」更新。
+
+    卸載時要把沒用到的檔案刪掉，那個清理函式讀的就是這個 ref。先前是靠
+    useEffect 把 state 同步過來，但送出成功時「清空清單」與「關閉表單」會被
+    React 批次處理成同一次 commit —— 同步用的 effect 根本來不及跑，卸載時
+    讀到的是過期的清單，於是把剛剛才提交成功的檔案刪掉了。
+
+    所有異動都走 commitItems，ref 與 state 一起更新，就沒有這個時間差。
+  */
+  const itemsRef = useRef<PendingUpload[]>([])
+
+  const commitItems = useCallback(
+    (next: PendingUpload[] | ((prev: PendingUpload[]) => PendingUpload[])) => {
+      const value =
+        typeof next === 'function' ? next(itemsRef.current) : next
+      itemsRef.current = value
+      setItems(value)
+    },
+    [],
+  )
+
+  // 元件卸載時釋放 object URL
   useEffect(() => {
     return () => {
       for (const i of itemsRef.current) URL.revokeObjectURL(i.previewUrl)
     }
   }, [])
 
-  const update = useCallback((id: string, patch: Partial<PendingUpload>) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
-  }, [])
+  const update = useCallback(
+    (id: string, patch: Partial<PendingUpload>) => {
+      commitItems((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, ...patch } : i)),
+      )
+    },
+    [commitItems],
+  )
 
   const add = useCallback(
     async (files: File[]) => {
@@ -65,12 +88,13 @@ export function usePendingUploads(tripId: string | null) {
           progress: 0,
         },
       }))
-      setItems((prev) => [...prev, ...batch.map((b) => b.entry)])
+      commitItems((prev) => [...prev, ...batch.map((b) => b.entry)])
 
       if (!tripId) {
         // 建立旅遊時還沒有 tripId，只能等送出後再傳
-        for (const b of batch)
+        for (const b of batch) {
           update(b.entry.id, { status: 'done', progress: 100 })
+        }
         return
       }
 
@@ -129,7 +153,7 @@ export function usePendingUploads(tripId: string | null) {
         }),
       )
     },
-    [tripId, mutations, update],
+    [tripId, mutations, update, commitItems],
   )
 
   /**
@@ -147,12 +171,15 @@ export function usePendingUploads(tripId: string | null) {
         ].filter((p): p is string => Boolean(p))
         if (paths.length) void mutations.discardPendingUploads(paths)
       }
-      setItems((prev) => prev.filter((i) => i.id !== id))
+      commitItems((prev) => prev.filter((i) => i.id !== id))
     },
-    [mutations],
+    [mutations, commitItems],
   )
 
-  const reorder = useCallback((next: PendingUpload[]) => setItems(next), [])
+  const reorder = useCallback(
+    (next: PendingUpload[]) => commitItems(next),
+    [commitItems],
+  )
 
   /**
    * 全部清掉。`discard` 為 true 時（放棄表單）連 Storage 的檔案一起刪；
@@ -169,9 +196,9 @@ export function usePendingUploads(tripId: string | null) {
         }
       }
       if (paths.length) void mutations.discardPendingUploads(paths)
-      setItems([])
+      commitItems([])
     },
-    [mutations],
+    [mutations, commitItems],
   )
 
   /** 還有東西在傳的話，表單的送出按鈕要維持停用 */
