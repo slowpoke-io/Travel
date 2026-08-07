@@ -16,14 +16,20 @@ export function DayTabs({
   days,
   currentDayIndex,
   counts,
+  onSelect,
 }: {
   days: TripDayRow[]
   currentDayIndex: number
   /** dayId → 該天的行程數 */
   counts: Record<string, number>
+  /**
+   * 有提供的話改用 button 就地切換，不做導航 ——
+   * 所有天的資料本來就都在手上，換頁只是把同樣的查詢再跑一次。
+   */
+  onSelect?: (dayIndex: number) => void
 }) {
   const base = useBasePath()
-  const activeRef = useRef<HTMLAnchorElement>(null)
+  const activeRef = useRef<HTMLAnchorElement & HTMLButtonElement>(null)
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({
@@ -39,23 +45,41 @@ export function DayTabs({
         {days.map((day) => {
           const active = day.day_index === currentDayIndex
           const count = counts[day.id] ?? 0
-          return (
+          const className = cn(
+            'relative flex min-w-[4.5rem] flex-col items-center overflow-hidden rounded-lg px-3 py-2 text-center transition-colors',
+            active
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground active:bg-muted/70',
+          )
+          const label = (
+            <>
+              <span className="text-sm font-semibold">Day {day.day_index}</span>
+              <span className="text-[11px] opacity-80">
+                {day.date ? formatDayLabel(day.date) : `${count} 個行程`}
+              </span>
+            </>
+          )
+
+          return onSelect ? (
+            <button
+              key={day.id}
+              type="button"
+              ref={active ? activeRef : undefined}
+              onClick={() => onSelect(day.day_index)}
+              aria-current={active ? 'page' : undefined}
+              className={className}
+            >
+              {label}
+            </button>
+          ) : (
             <Link
               key={day.id}
               ref={active ? activeRef : undefined}
               href={`${base}/d/${day.day_index}`}
               aria-current={active ? 'page' : undefined}
-              className={cn(
-                'relative flex min-w-[4.5rem] flex-col items-center overflow-hidden rounded-lg px-3 py-2 text-center transition-colors',
-                active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground active:bg-muted/70',
-              )}
+              className={className}
             >
-              <span className="text-sm font-semibold">Day {day.day_index}</span>
-              <span className="text-[11px] opacity-80">
-                {day.date ? formatDayLabel(day.date) : `${count} 個行程`}
-              </span>
+              {label}
               <TabPendingBar />
             </Link>
           )

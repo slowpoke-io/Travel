@@ -111,10 +111,6 @@ export function TripCoverManager({
         )}
       </div>
 
-      <p className="text-muted-foreground text-xs">
-        顯示在旅遊列表的卡片與概覽頁最上方。
-        {cover ? '要換一張的話，先移除現在這張。' : ''}
-      </p>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

@@ -23,8 +23,8 @@ export default async function SharedDayPage({
   return (
     <DayView
       days={bundle.days}
-      currentDay={day}
-      dayActivities={vm.byDay.get(day.id) ?? []}
+      activitiesByDay={Object.fromEntries(vm.byDay)}
+      initialDayIndex={day.day_index}
       backlogActivities={vm.backlog}
       tags={bundle.tags}
       counts={vm.counts}

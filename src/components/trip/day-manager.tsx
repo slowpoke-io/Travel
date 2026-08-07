@@ -109,9 +109,6 @@ export function DayManager({
         )}
         加一天
       </Button>
-      <p className="text-muted-foreground text-xs">
-        直接修改上方的旅遊日期也會自動增減天數。
-      </p>
 
       <AlertDialog
         open={Boolean(confirm)}

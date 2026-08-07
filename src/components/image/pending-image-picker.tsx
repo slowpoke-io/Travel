@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   DndContext,
   KeyboardSensor,
@@ -18,39 +18,33 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ImagePlus, X } from 'lucide-react'
+import { ImagePlus, TriangleAlert, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { isSupportedImage } from '@/lib/image-compress'
+import type { PendingUpload } from '@/lib/use-pending-uploads'
 import { cn } from '@/lib/utils'
-
-export type PendingImage = {
-  /** 穩定的識別碼，拖曳排序需要 */
-  id: string
-  file: File
-  /** object URL，僅供表單內預覽 */
-  previewUrl: string
-}
 
 const MAX_IMAGES = 10
 
 /**
- * 表單內的「待上傳」圖片選擇器，可拖曳排序。
+ * 待上傳圖片的選擇器，可拖曳排序。
  *
- * 新增行程時該行程還不存在，images 的外鍵沒有對象可指，
- * 所以這裡只先留住 File 與預覽，等行程建立成功後才真正上傳。
- * 中途取消的話 Storage 不會留下任何孤兒檔案。
+ * 選好就立刻開始上傳，進度以圓環壓在預覽圖上。使用者可以在上傳的同時
+ * 繼續填其他欄位 —— 送出按鈕會等到全部傳完才亮。
  *
- * 排在第一張的會成為封面，所以拖曳排序同時也是「選封面」的操作。
+ * 排第一張的成為封面，所以拖曳排序同時也是「選封面」的操作。
  */
 export function PendingImagePicker({
-  images,
-  onChange,
-  /** 這個行程目前是否已經有封面（有的話新圖就不會再標成封面） */
+  items,
+  onAdd,
+  onRemove,
+  onReorder,
   hasExistingCover,
 }: {
-  images: PendingImage[]
-  onChange: (next: PendingImage[]) => void
+  items: PendingUpload[]
+  onAdd: (files: File[]) => void
+  onRemove: (id: string) => void
+  onReorder: (next: PendingUpload[]) => void
   hasExistingCover: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -64,45 +58,14 @@ export function PendingImagePicker({
     }),
   )
 
-  // 元件卸載時釋放 object URL，否則會累積佔記憶體
-  const imagesRef = useRef(images)
-  useEffect(() => {
-    imagesRef.current = images
-  }, [images])
-  useEffect(() => {
-    return () => {
-      for (const img of imagesRef.current) URL.revokeObjectURL(img.previewUrl)
-    }
-  }, [])
-
-  function handlePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []).filter(isSupportedImage)
-    e.target.value = '' // 允許重選同一張
-    if (!picked.length) return
-
-    const room = MAX_IMAGES - images.length
-    const next = picked.slice(0, room).map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }))
-    onChange([...images, ...next])
-  }
-
-  function remove(id: string) {
-    const target = images.find((i) => i.id === id)
-    if (target) URL.revokeObjectURL(target.previewUrl)
-    onChange(images.filter((i) => i.id !== id))
-  }
-
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null)
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const from = images.findIndex((i) => i.id === active.id)
-    const to = images.findIndex((i) => i.id === over.id)
+    const from = items.findIndex((i) => i.id === active.id)
+    const to = items.findIndex((i) => i.id === over.id)
     if (from < 0 || to < 0) return
-    onChange(arrayMove(images, from, to))
+    onReorder(arrayMove(items, from, to))
   }
 
   return (
@@ -112,11 +75,15 @@ export function PendingImagePicker({
         type="file"
         accept="image/*"
         multiple
-        onChange={handlePick}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          e.target.value = '' // 允許重選同一張
+          if (files.length) onAdd(files)
+        }}
         className="hidden"
       />
 
-      {images.length > 0 ? (
+      {items.length > 0 ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -125,17 +92,17 @@ export function PendingImagePicker({
           onDragCancel={() => setActiveId(null)}
         >
           <SortableContext
-            items={images.map((i) => i.id)}
+            items={items.map((i) => i.id)}
             strategy={rectSortingStrategy}
           >
             <ul className="grid grid-cols-4 gap-2">
-              {images.map((img, index) => (
+              {items.map((item, index) => (
                 <SortableThumb
-                  key={img.id}
-                  image={img}
+                  key={item.id}
+                  item={item}
                   isCover={index === 0 && !hasExistingCover}
-                  dragging={activeId === img.id}
-                  onRemove={() => remove(img.id)}
+                  dragging={activeId === item.id}
+                  onRemove={() => onRemove(item.id)}
                 />
               ))}
             </ul>
@@ -143,7 +110,7 @@ export function PendingImagePicker({
         </DndContext>
       ) : null}
 
-      {images.length < MAX_IMAGES ? (
+      {items.length < MAX_IMAGES ? (
         <Button
           type="button"
           variant="outline"
@@ -151,36 +118,26 @@ export function PendingImagePicker({
           className="w-full gap-2"
         >
           <ImagePlus className="size-4" aria-hidden />
-          {images.length ? '再加圖片' : '加入圖片'}
+          {items.length ? '再加圖片' : '加入圖片'}
         </Button>
       ) : null}
-
-      <p className="text-muted-foreground text-xs">
-        {images.length > 1
-          ? '拖曳可調整順序，排第一張的會成為封面。'
-          : images.length === 1
-            ? hasExistingCover
-              ? '這張會歸類為「資訊」，因為已經有封面了。'
-              : '這張會成為封面。再加幾張可以拖曳調整順序。'
-            : '可先加封面或票券截圖，之後在詳情頁還能分類成資訊／紀錄。'}
-      </p>
     </div>
   )
 }
 
 function SortableThumb({
-  image,
+  item,
   isCover,
   dragging,
   onRemove,
 }: {
-  image: PendingImage
+  item: PendingUpload
   isCover: boolean
   dragging: boolean
   onRemove: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: image.id })
+    useSortable({ id: item.id })
 
   return (
     <li
@@ -194,17 +151,36 @@ function SortableThumb({
         className="drag-handle bg-muted relative aspect-square overflow-hidden rounded-lg"
       >
         {/*
-          預覽用原生 <img> 而不是 next/image：來源是本機的 blob URL，
-          next/image 幫不上任何忙（一定要 unoptimized），但它的版面計算會在
-          一次選多張時造成明顯的閃爍與重排。
+          預覽用原生 <img>：來源是本機 blob URL，next/image 幫不上忙
+          （一定要 unoptimized），卻會在一次選多張時造成明顯閃爍。
         */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={image.previewUrl}
+          src={item.previewUrl}
           alt=""
-          className="pointer-events-none absolute inset-0 size-full object-cover"
+          className={cn(
+            'pointer-events-none absolute inset-0 size-full object-cover transition-opacity',
+            item.status !== 'done' && 'opacity-50',
+          )}
         />
-        {isCover ? (
+
+        {item.status === 'uploading' ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/25">
+            <ProgressRing value={item.progress} />
+          </span>
+        ) : null}
+
+        {item.status === 'error' ? (
+          <span
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-900/60 text-white"
+            title={item.error}
+          >
+            <TriangleAlert className="size-5" aria-hidden />
+            <span className="text-[10px]">上傳失敗</span>
+          </span>
+        ) : null}
+
+        {isCover && item.status === 'done' ? (
           <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1 text-[9px] text-white">
             封面
           </span>
@@ -223,16 +199,41 @@ function SortableThumb({
   )
 }
 
-/**
- * 決定每張待上傳圖片的用途。
- * 封面只能有一張（資料庫的 partial unique index 會擋），
- * 所以已經有封面時，新加的一律歸到「資訊」。
- */
-export function resolvePendingRoles(
-  count: number,
-  hasExistingCover: boolean,
-): ('cover' | 'info')[] {
-  return Array.from({ length: count }, (_, i) =>
-    i === 0 && !hasExistingCover ? 'cover' : 'info',
+/** 壓在預覽圖上的環形進度 */
+function ProgressRing({ value }: { value: number }) {
+  const r = 14
+  const circumference = 2 * Math.PI * r
+  const offset = circumference * (1 - Math.min(Math.max(value, 0), 100) / 100)
+
+  return (
+    <svg
+      viewBox="0 0 36 36"
+      className="size-9 -rotate-90"
+      role="progressbar"
+      aria-valuenow={Math.round(value)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <circle
+        cx="18"
+        cy="18"
+        r={r}
+        fill="none"
+        stroke="rgba(255,255,255,.3)"
+        strokeWidth="3"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r={r}
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        style={{ transition: 'stroke-dashoffset 240ms ease' }}
+      />
+    </svg>
   )
 }

@@ -95,9 +95,6 @@ function EmptyState() {
         <Luggage className="text-muted-foreground size-7" aria-hidden />
       </div>
       <h2 className="mt-5 text-lg font-semibold">還沒有任何旅遊</h2>
-      <p className="text-muted-foreground mt-2 max-w-[16rem] text-sm leading-relaxed">
-        建立第一趟旅遊，就能開始把想去的地方排進每一天。
-      </p>
       <Button asChild className="mt-6">
         <Link href="/trips/new">建立第一趟旅遊</Link>
       </Button>

@@ -251,9 +251,6 @@ export function DaySortSheet({
         </DragOverlay>
       </DndContext>
 
-      <p className="text-muted-foreground pb-safe border-t px-4 py-2 text-center text-xs">
-        按住左側 ⣿ 把手拖曳排序，可跨區搬到儲備區
-      </p>
     </FullScreenSheet>
   )
 }

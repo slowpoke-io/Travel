@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpDown, MapIcon, Plus } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activity/activity-card'
@@ -17,7 +17,7 @@ import { MoveToSheet } from '@/components/activity/move-to-sheet'
 import { AddImageSheet } from '@/components/image/add-image-sheet'
 import { ActivityMap, toMappedActivities } from '@/components/map/activity-map'
 import { DayTabs } from '@/components/trip/day-tabs'
-import { useTripAccess } from '@/components/trip/trip-access'
+import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
 import { Button } from '@/components/ui/button'
 import { dayColor } from '@/lib/constants'
 import { formatFullDate } from '@/lib/format'
@@ -30,27 +30,96 @@ import type {
 
 type Props = {
   days: TripDayRow[]
-  currentDay: TripDayRow
-  /** 當天的行程，已依 position 排序 */
-  dayActivities: ActivityWithRelations[]
+  /** 每一天的行程，全部都帶進來 —— 切換日期因此不需要再往返伺服器 */
+  activitiesByDay: Record<string, ActivityWithRelations[]>
   backlogActivities: ActivityWithRelations[]
   tags: TagRow[]
   counts: Record<string, number>
   placeSearchEnabled: boolean
+  /** 由網址決定的初始日期；之後的切換由 client 端接手 */
+  initialDayIndex: number
 }
 
 export function DayView({
   days,
-  currentDay,
-  dayActivities,
+  activitiesByDay,
   backlogActivities,
   tags,
   counts,
   placeSearchEnabled,
+  initialDayIndex,
 }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const base = useBasePath()
   const { canEdit } = useTripAccess()
+
+  /*
+    切換日期不做導航。
+
+    每一天的資料在同一份 bundle 裡就全拿到了，走 <Link> 換頁只會讓伺服器
+    把同樣的 6 個查詢重跑一次，換來一段空白。改成 client 端切換 +
+    history.pushState 同步網址：切換是瞬間的，但網址仍然可以分享、
+    上一頁也照常運作。
+  */
+  const [dayIndex, setDayIndex] = useState(initialDayIndex)
+
+  // 真正的導航（深連結、底部導覽）才會換 initialDayIndex，此時跟著網址走。
+  // 在 render 期間調整自己的狀態是 React 官方認可的作法，不會有串連渲染。
+  const [lastInitial, setLastInitial] = useState(initialDayIndex)
+  if (initialDayIndex !== lastInitial) {
+    setLastInitial(initialDayIndex)
+    setDayIndex(initialDayIndex)
+  }
+
+  useEffect(() => {
+    function onPop() {
+      const m = window.location.pathname.match(/\/d\/(\d+)/)
+      if (m) setDayIndex(Number(m[1]))
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function selectDay(next: number) {
+    if (next === dayIndex) return
+    setDayIndex(next)
+    // 只換網址，不觸發 Next 的導航與資料重取
+    window.history.pushState(
+      null,
+      '',
+      `${base}/d/${next}${window.location.search}`,
+    )
+  }
+
+  /*
+    新增後樂觀顯示。
+
+    建立成功之後仍要 router.refresh() 才拿得到伺服器版本的資料，中間有一段
+    空窗，看起來像「送出了但沒反應」。這裡先用手邊已有的輸入內容把卡片畫出來，
+    等真正的資料回來（id 出現在 props 裡）再把暫時的那筆移除。
+  */
+  const [optimistic, setOptimistic] = useState<ActivityWithRelations[]>([])
+  const serverIds = new Set(
+    Object.values(activitiesByDay)
+      .flat()
+      .map((a) => a.id),
+  )
+  const pendingOptimistic = optimistic.filter((a) => !serverIds.has(a.id))
+  if (pendingOptimistic.length !== optimistic.length) {
+    setOptimistic(pendingOptimistic)
+  }
+
+  // 一起算，參考才會穩定，下游的 useMemo 也才不會每次 render 都失效
+  const { currentDay, dayActivities } = useMemo(() => {
+    const day = days.find((d) => d.day_index === dayIndex) ?? days[0]
+    const fromServer = activitiesByDay[day?.id] ?? []
+    const mine = pendingOptimistic.filter((a) => a.day_id === day?.id)
+    return {
+      currentDay: day,
+      dayActivities: mine.length ? [...fromServer, ...mine] : fromServer,
+    }
+  }, [days, dayIndex, activitiesByDay, pendingOptimistic])
 
   const [sortOpen, setSortOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
@@ -93,8 +162,9 @@ export function DayView({
     <>
       <DayTabs
         days={days}
-        currentDayIndex={currentDay.day_index}
+        currentDayIndex={dayIndex}
         counts={counts}
+        onSelect={selectDay}
       />
 
       <FilterBar tags={tags} availableCategories={availableCategories} />
@@ -202,6 +272,7 @@ export function DayView({
         dayId={currentDay.id}
         tags={tags}
         placeSearchEnabled={placeSearchEnabled}
+        onCreated={(activity) => setOptimistic((prev) => [...prev, activity])}
         onSaved={() => router.refresh()}
       />
 

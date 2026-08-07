@@ -6,12 +6,9 @@ import { toast } from 'sonner'
 
 import { PlaceSearch, type PlaceResult } from '@/components/map/place-search'
 import { TagPicker } from '@/components/activity/tag-picker'
-import {
-  PendingImagePicker,
-  resolvePendingRoles,
-  type PendingImage,
-} from '@/components/image/pending-image-picker'
-import { useImageUpload } from '@/lib/use-image-upload'
+import { PendingImagePicker } from '@/components/image/pending-image-picker'
+import { usePendingUploads } from '@/lib/use-pending-uploads'
+import { useTripAccess } from '@/components/trip/trip-access'
 import { Button } from '@/components/ui/button'
 import { FullScreenSheet } from '@/components/ui/full-screen-sheet'
 import { Input } from '@/components/ui/input'
@@ -41,6 +38,8 @@ type Props = {
   tags: TagRow[]
   placeSearchEnabled: boolean
   onSaved?: () => void
+  /** 建立成功時把新行程交出去，讓列表可以先樂觀顯示 */
+  onCreated?: (activity: ActivityWithRelations) => void
 }
 
 type FormState = {
@@ -97,6 +96,7 @@ export function ActivityFormSheet({
   tags,
   placeSearchEnabled,
   onSaved,
+  onCreated,
 }: Props) {
   return (
     <FullScreenSheet
@@ -117,6 +117,7 @@ export function ActivityFormSheet({
         placeSearchEnabled={placeSearchEnabled}
         onOpenChange={onOpenChange}
         onSaved={onSaved}
+        onCreated={onCreated}
       />
     </FullScreenSheet>
   )
@@ -129,21 +130,24 @@ function ActivityFormBody({
   placeSearchEnabled,
   onOpenChange,
   onSaved,
+  onCreated,
 }: Omit<Props, 'open'>) {
   const mutations = useTripMutations()
-  const { upload, progress } = useImageUpload()
+  const { tripId } = useTripAccess()
+  // 選好圖片就開始傳，不用等按下送出
+  const uploads = usePendingUploads(tripId)
   const [pending, startTransition] = useTransition()
   const [form, setForm] = useState<FormState>(() =>
     activity ? fromActivity(activity) : emptyState(),
   )
   const [localTags, setLocalTags] = useState<TagRow[]>(tags)
-  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
 
   const isEdit = Boolean(activity)
   const hasExistingCover = Boolean(
     activity?.images.some((i) => i.role === 'cover'),
   )
-  const busy = pending || progress.uploading
+  // 還有圖片在傳的話不讓送出 —— 送出去也寫不進 images
+  const busy = pending || uploads.uploading
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -206,25 +210,36 @@ function ActivityFormBody({
         return
       }
 
-      // 圖片要等行程存在之後才能上傳（images 的外鍵指向 activity）。
-      // 先前只留住 File，到這裡才真正壓縮並直傳，中途取消就不會產生孤兒檔案。
-      if (pendingImages.length) {
+      // 檔案在選取當下就傳完了，這裡只要把資料列補上（外鍵需要 activity 先存在）
+      const images = uploads.toCommitInputs(hasExistingCover)
+      if (images.length) {
         const activityId =
           activity?.id ?? (typeof result.data === 'string' ? result.data : null)
+        if (activityId) await mutations.commitImages(activityId, images)
+      }
 
-        if (activityId) {
-          await upload(
-            pendingImages.map((p) => p.file),
-            {
-              activityId,
-              role: 'info',
-              roles: resolvePendingRoles(
-                pendingImages.length,
-                hasExistingCover,
-              ),
-            },
-          )
-        }
+      // 先把卡片畫出來，不用等 router.refresh() 的那趟往返
+      if (!activity && typeof result.data === 'string') {
+        onCreated?.({
+          ...input,
+          id: result.data,
+          trip_id: tripId,
+          day_id: dayId,
+          position: Number.MAX_SAFE_INTEGER,
+          start_time: null,
+          duration_minutes: null,
+          notes: input.notes ?? null,
+          place_name: input.place_name ?? null,
+          address: input.address ?? null,
+          lat: input.lat ?? null,
+          lng: input.lng ?? null,
+          google_place_id: input.google_place_id ?? null,
+          created_by: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          tagIds: input.tagIds ?? [],
+          images: [],
+        } as unknown as ActivityWithRelations)
       }
 
       toast.success(isEdit ? '已儲存' : '已新增行程')
@@ -343,13 +358,6 @@ function ActivityFormBody({
               加一個
             </Button>
           </div>
-
-          {form.times.length === 0 ? (
-            <p className="text-muted-foreground text-xs">
-              班機、訂位、時段票、末班車…… 這些錯過會有代價的時間。
-              一般行程不用填，靠順序就好。
-            </p>
-          ) : null}
 
           {form.times.map((entry, index) => (
             <div key={index} className="space-y-1.5">
@@ -502,8 +510,10 @@ function ActivityFormBody({
         <div className="space-y-2">
           <Label>圖片</Label>
           <PendingImagePicker
-            images={pendingImages}
-            onChange={setPendingImages}
+            items={uploads.items}
+            onAdd={uploads.add}
+            onRemove={uploads.remove}
+            onReorder={uploads.reorder}
             hasExistingCover={hasExistingCover}
           />
         </div>
@@ -532,11 +542,7 @@ function ActivityFormBody({
           {busy ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : null}
-          {progress.uploading
-            ? `上傳圖片 ${progress.done}/${progress.total}`
-            : isEdit
-              ? '儲存'
-              : '新增'}
+          {uploads.uploading ? '圖片上傳中…' : isEdit ? '儲存' : '新增'}
         </Button>
       </div>
     </form>

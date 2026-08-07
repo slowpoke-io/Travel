@@ -88,9 +88,6 @@ export function ShareSettings({
           <Label htmlFor="share-enabled" className="text-sm font-medium">
             開啟分享連結
           </Label>
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-            任何拿到連結的人都能看到這趟旅遊，不需要登入。
-          </p>
         </div>
         <Switch
           id="share-enabled"

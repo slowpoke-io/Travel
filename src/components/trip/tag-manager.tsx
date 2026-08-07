@@ -53,11 +53,7 @@ export function TagManager({
 
   return (
     <div className="space-y-3">
-      {tags.length === 0 ? (
-        <p className="text-muted-foreground text-xs">
-          還沒有標籤。標籤可以用來標記「必去」「排隊久」「雨備」等，之後在行程列表篩選。
-        </p>
-      ) : (
+      {tags.length === 0 ? null : (
         <ul className="flex flex-wrap gap-1.5">
           {tags.map((tag) => (
             <li key={tag.id}>
@@ -128,9 +124,6 @@ export function TagManager({
         </Button>
       </div>
 
-      <p className="text-muted-foreground text-xs">
-        刪除標籤時，套用該標籤的行程不會被刪除，只是不再有這個標籤。
-      </p>
     </div>
   )
 }

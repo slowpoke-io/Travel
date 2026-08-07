@@ -155,11 +155,6 @@ export function ImageGallery({
                 />
               ) : null}
 
-              {role === 'cover' && list.length > 0 && canEdit ? (
-                <p className="text-muted-foreground text-center text-xs">
-                  封面只能有一張。要換的話，到「資訊」或「紀錄」分頁點圖片後選「設為封面」。
-                </p>
-              ) : null}
             </TabsContent>
           )
         })}

@@ -162,9 +162,7 @@ export function TripMapView({
         </ol>
       ) : (
         <div className="text-muted-foreground px-4 py-6 text-center text-xs">
-          {selectedDay === ALL
-            ? '選擇某一天可以看到當天的順序與清單'
-            : '這一天還沒有行程'}
+          {selectedDay === ALL ? null : '這一天還沒有行程'}
         </div>
       )}
     </div>

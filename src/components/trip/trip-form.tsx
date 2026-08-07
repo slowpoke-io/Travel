@@ -18,10 +18,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  PendingImagePicker,
-  type PendingImage,
-} from '@/components/image/pending-image-picker'
+import { PendingImagePicker } from '@/components/image/pending-image-picker'
+import type { PendingUpload } from '@/lib/use-pending-uploads'
 import type { ActionResult } from '@/lib/action-result'
 import type { TripInput } from '@/lib/schemas'
 import { uploadTripCover } from '@/lib/upload-trip-cover'
@@ -65,7 +63,12 @@ export function TripForm({
     return from ? { from, to } : undefined
   })
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [cover, setCover] = useState<PendingImage[]>([])
+  /*
+    建立旅遊時 tripId 還不存在，Storage 的路徑要以它開頭，所以沒辦法
+    像行程那樣先傳。這裡只留住檔案，等旅遊建立完成才上傳。
+  */
+  const [cover, setCover] = useState<PendingUpload[]>([])
+  const [coverFile, setCoverFile] = useState<File | null>(null)
   const [uploadingCover, setUploadingCover] = useState(false)
 
   const nights =
@@ -107,9 +110,9 @@ export function TripForm({
       const newId = typeof result.data === 'string' ? result.data : undefined
 
       // 封面要等旅遊存在之後才能上傳（images 的外鍵指向 trip）
-      if (newId && cover[0]) {
+      if (newId && coverFile) {
         setUploadingCover(true)
-        await uploadTripCover(newId, cover[0].file)
+        await uploadTripCover(newId, coverFile)
         setUploadingCover(false)
       }
 
@@ -200,11 +203,7 @@ export function TripForm({
           </PopoverContent>
         </Popover>
 
-        {mode === 'create' ? (
-          <p className="text-muted-foreground text-xs">
-            建立後會依日期自動產生每一天，之後也能再調整。
-          </p>
-        ) : dayCountChanged ? (
+        {dayCountChanged ? (
           <p className="text-xs text-amber-600 dark:text-amber-500">
             天數會從 {dayCountHint} 天變成 {nights} 天。
             {nights < (dayCountHint ?? 0)
@@ -218,8 +217,27 @@ export function TripForm({
         <div className="space-y-2">
           <Label>封面圖片</Label>
           <PendingImagePicker
-            images={cover}
-            onChange={(next) => setCover(next.slice(-1))}
+            items={cover}
+            onAdd={(files) => {
+              const file = files[0]
+              if (!file) return
+              for (const c of cover) URL.revokeObjectURL(c.previewUrl)
+              setCoverFile(file)
+              setCover([
+                {
+                  id: crypto.randomUUID(),
+                  previewUrl: URL.createObjectURL(file),
+                  status: 'done',
+                  progress: 100,
+                },
+              ])
+            }}
+            onRemove={() => {
+              for (const c of cover) URL.revokeObjectURL(c.previewUrl)
+              setCover([])
+              setCoverFile(null)
+            }}
+            onReorder={setCover}
             hasExistingCover={false}
           />
         </div>
