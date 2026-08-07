@@ -9,16 +9,7 @@ import { toast } from 'sonner'
 import { ImagePickerButton } from '@/components/image/image-picker-button'
 import { Lightbox } from '@/components/image/lightbox'
 import { useTripAccess } from '@/components/trip/trip-access'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getThumbUrl } from '@/lib/image-url'
 import type { ImageRole, ImageRow } from '@/lib/supabase/database.types'
@@ -55,18 +46,16 @@ export function ImageGallery({
 
   const byRole = (role: ImageRole) => images.filter((i) => i.role === role)
 
-  function remove(image: ImageRow) {
-    startTransition(async () => {
-      const result = await mutations.deleteImage(image.id)
-      if (!result.ok) {
-        toast.error('刪除失敗', { description: result.error })
-        return
-      }
-      toast.success('已刪除圖片')
-      setConfirmDelete(null)
-      setLightbox(null)
-      router.refresh()
-    })
+  async function remove(image: ImageRow) {
+    const result = await mutations.deleteImage(image.id)
+    if (!result.ok) {
+      toast.error('刪除失敗', { description: result.error })
+      return false
+    }
+    toast.success('已刪除圖片')
+    setLightbox(null)
+    router.refresh()
+    return true
   }
 
   function makeCover(image: ImageRow) {
@@ -171,31 +160,15 @@ export function ImageGallery({
         />
       ) : null}
 
-      <AlertDialog
-        open={Boolean(confirmDelete)}
-        onOpenChange={(open) => !open && setConfirmDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>刪除這張圖片？</AlertDialogTitle>
-            <AlertDialogDescription>
-              圖片檔案會一併從儲存空間刪除，無法復原。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                if (confirmDelete) remove(confirmDelete)
-              }}
-              className="bg-destructive hover:bg-destructive/90 text-white"
-            >
-              刪除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={(next) => !next && setConfirmDelete(null)}
+        title="刪除這張圖片？"
+        description="檔案會從儲存空間一併移除，無法復原。"
+        confirmLabel="刪除"
+        destructive
+        onConfirm={() => remove(confirmDelete!)}
+      />
     </>
   )
 }

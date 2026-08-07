@@ -6,17 +6,8 @@ import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { addTripDay, deleteTripDay } from '@/actions/owner/trips'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatDayLabel } from '@/lib/format'
 import type { TripDayRow } from '@/lib/supabase/database.types'
 
@@ -45,22 +36,20 @@ export function DayManager({
     })
   }
 
-  function remove(day: TripDayRow) {
-    startTransition(async () => {
-      const result = await deleteTripDay(tripId, day.id)
-      if (!result.ok) {
-        toast.error('刪除失敗', { description: result.error })
-        return
-      }
-      const moved = counts[day.id] ?? 0
-      toast.success(
-        moved > 0
-          ? `已刪除 Day ${day.day_index}，${moved} 個行程已退回儲備區`
-          : `已刪除 Day ${day.day_index}`,
-      )
-      setConfirm(null)
-      router.refresh()
-    })
+  async function remove(day: TripDayRow) {
+    const result = await deleteTripDay(tripId, day.id)
+    if (!result.ok) {
+      toast.error('刪除失敗', { description: result.error })
+      return false
+    }
+    const moved = counts[day.id] ?? 0
+    toast.success(
+      moved > 0
+        ? `已刪除 Day ${day.day_index}，${moved} 個行程已退回儲備區`
+        : `已刪除 Day ${day.day_index}`,
+    )
+    router.refresh()
+    return true
   }
 
   return (
@@ -110,33 +99,19 @@ export function DayManager({
         加一天
       </Button>
 
-      <AlertDialog
-        open={Boolean(confirm)}
-        onOpenChange={(open) => !open && setConfirm(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>刪除 Day {confirm?.day_index}？</AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm && (counts[confirm.id] ?? 0) > 0
-                ? `這一天的 ${counts[confirm.id]} 個行程會退回「行程儲備區」，不會被刪除。之後的天數會往前遞補。`
-                : '之後的天數會往前遞補。'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                if (confirm) remove(confirm)
-              }}
-              className="bg-destructive hover:bg-destructive/90 text-white"
-            >
-              刪除這一天
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(next) => !next && setConfirm(null)}
+        title={`刪除 Day ${confirm?.day_index}？`}
+        description={
+          confirm && (counts[confirm.id] ?? 0) > 0
+            ? `這一天的 ${counts[confirm.id]} 個行程會退回「行程儲備區」，不會被刪除。之後的天數會往前遞補。`
+            : '之後的天數會往前遞補。'
+        }
+        confirmLabel="刪除這一天"
+        destructive
+        onConfirm={() => remove(confirm!)}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ImagePlus, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ export function ImagePickerButton({
   variant = 'outline',
   className,
   onUploaded,
+  onUploadingChange,
 }: {
   activityId: string | null
   role: ImageRole
@@ -28,9 +29,16 @@ export function ImagePickerButton({
   variant?: 'outline' | 'secondary' | 'ghost' | 'default'
   className?: string
   onUploaded?: () => void
+  /** 讓外層（例如面板）可以在上傳中鎖住其他操作 */
+  onUploadingChange?: (uploading: boolean) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { upload, progress } = useImageUpload()
+
+  useEffect(() => {
+    onUploadingChange?.(progress.uploading)
+    return () => onUploadingChange?.(false)
+  }, [progress.uploading, onUploadingChange])
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])

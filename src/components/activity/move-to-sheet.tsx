@@ -95,7 +95,7 @@ export function MoveToSheet({
   ]
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} busy={pending}>
       <DrawerContent className="max-h-[80dvh]">
         <DrawerHeader>
           <DrawerTitle>移動到…</DrawerTitle>

@@ -1,21 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { Loader2, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { deleteTrip } from '@/actions/owner/trips'
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -33,20 +25,24 @@ export function DeleteTripButton({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [pending, startTransition] = useTransition()
+  /*
+    刪除成功後不關閉對話框 —— 讓它一直蓋著直到跳轉完成，
+    否則會先閃一下「已經被刪掉的旅遊」的設定頁。
+  */
+  const [deleted, setDeleted] = useState(false)
 
   const matches = confirmText.trim() === title.trim()
 
-  function remove() {
-    startTransition(async () => {
-      const result = await deleteTrip(tripId)
-      if (!result.ok) {
-        toast.error('刪除失敗', { description: result.error })
-        return
-      }
-      toast.success('旅遊已刪除')
-      router.push('/trips')
-    })
+  async function remove() {
+    const result = await deleteTrip(tripId)
+    if (!result.ok) {
+      toast.error('刪除失敗', { description: result.error })
+      return false
+    }
+    setDeleted(true)
+    toast.success('旅遊已刪除')
+    router.push('/trips')
+    return false
   }
 
   return (
@@ -63,43 +59,29 @@ export function DeleteTripButton({
         刪除這趟旅遊
       </Button>
 
-      <AlertDialog open={open} onOpenChange={setOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>刪除「{title}」？</AlertDialogTitle>
-            <AlertDialogDescription>
-              所有天數、行程、標籤與已上傳的圖片都會被永久刪除，無法復原。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirm-title" className="text-sm">
-              請輸入旅遊名稱以確認
-            </Label>
-            <Input
-              id="confirm-title"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={title}
-              autoComplete="off"
-            />
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              disabled={!matches || pending}
-              onClick={remove}
-            >
-              {pending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : null}
-              永久刪除
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`刪除「${title}」？`}
+        description="所有天數、行程、標籤與已上傳的圖片都會被永久刪除，無法復原。"
+        confirmLabel="永久刪除"
+        destructive
+        disabled={!matches || deleted}
+        onConfirm={remove}
+      >
+        <div className="space-y-2">
+          <Label htmlFor="confirm-title" className="text-sm">
+            請輸入旅遊名稱以確認
+          </Label>
+          <Input
+            id="confirm-title"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={title}
+            autoComplete="off"
+          />
+        </div>
+      </ConfirmDialog>
     </>
   )
 }

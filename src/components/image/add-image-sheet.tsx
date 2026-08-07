@@ -1,9 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Camera, FileText, ImageIcon } from 'lucide-react'
 
 import { ImagePickerButton } from '@/components/image/image-picker-button'
+import type { ImageRole } from '@/lib/supabase/database.types'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Drawer,
@@ -53,6 +56,13 @@ export function AddImageSheet({
   hasCover?: boolean
 }) {
   const router = useRouter()
+  /*
+    上傳中鎖住整個面板 —— 這時關掉它會讓使用者以為取消了，其實檔案還在傳。
+    記的是「哪一種用途在傳」，這樣正在傳的那一列還看得到自己的進度，
+    其他列則整個停用。
+  */
+  const [uploadingRole, setUploadingRole] = useState<ImageRole | null>(null)
+  const uploading = uploadingRole !== null
 
   /*
     封面只能有一張（資料庫的 partial unique index 擋著），
@@ -67,7 +77,7 @@ export function AddImageSheet({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} busy={uploading}>
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>加入圖片</DrawerTitle>
@@ -77,10 +87,16 @@ export function AddImageSheet({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="space-y-2 px-4">
+        <div
+          className={cn(
+            'space-y-2 px-4 transition-opacity',
+            uploading && 'opacity-60',
+          )}
+        >
           {roles.map(({ role, icon: Icon, label, hint }) => (
             <div
               key={role}
+              inert={(uploading && uploadingRole !== role) || undefined}
               className="flex items-center gap-3 rounded-lg border p-3"
             >
               <Icon
@@ -97,6 +113,7 @@ export function AddImageSheet({
                 label="選擇"
                 variant="secondary"
                 onUploaded={handleUploaded}
+                onUploadingChange={(u) => setUploadingRole(u ? role : null)}
               />
             </div>
           ))}
@@ -105,6 +122,7 @@ export function AddImageSheet({
         <div className="pb-safe px-4 py-4">
           <Button
             variant="ghost"
+            disabled={uploading}
             onClick={() => onOpenChange(false)}
             className="w-full"
           >

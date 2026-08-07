@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import {
   Clock,
   ExternalLink,
@@ -15,17 +15,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -67,7 +58,11 @@ export function ActivityCard({
   const base = useBasePath()
   const { canEdit } = useTripAccess()
   const mutations = useTripMutations()
-  const [pending, startTransition] = useTransition()
+  /*
+    刪除成功後卡片仍會停留到資料更新為止，所以維持淡出＋轉圈，
+    不要讓它看起來像「還沒被刪」。
+  */
+  const [removing, setRemoving] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const meta = categoryMeta(activity.category)
@@ -76,24 +71,27 @@ export function ActivityCard({
   const coverUrl = cover ? getThumbUrl(cover) : null
   const activityTags = tags.filter((t) => activity.tagIds.includes(t.id))
 
-  function remove() {
-    startTransition(async () => {
-      const result = await mutations.deleteActivity(activity.id)
-      if (result.ok) toast.success('已刪除行程')
-      else toast.error('刪除失敗', { description: result.error })
-      setConfirmOpen(false)
-    })
+  async function remove() {
+    setRemoving(true)
+    const result = await mutations.deleteActivity(activity.id)
+    if (!result.ok) {
+      setRemoving(false)
+      toast.error('刪除失敗', { description: result.error })
+      return false
+    }
+    toast.success('已刪除行程')
+    return true
   }
 
   return (
     <article
       className={cn(
         'bg-card relative overflow-hidden rounded-xl border transition-opacity',
-        pending && 'opacity-60',
+        removing && 'opacity-60',
       )}
     >
       {/* 刪除中：蓋一層並顯示轉圈，讓人知道是在處理而不是卡住 */}
-      {pending ? (
+      {removing ? (
         <div className="bg-background/40 absolute inset-0 z-10 flex items-center justify-center">
           <Loader2
             className="text-foreground size-5 animate-spin"
@@ -259,28 +257,15 @@ export function ActivityCard({
         </div>
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>刪除「{activity.title}」？</AlertDialogTitle>
-            <AlertDialogDescription>
-              這個行程與它的圖片都會一起刪除，無法復原。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                remove()
-              }}
-              className="bg-destructive hover:bg-destructive/90 text-white"
-            >
-              刪除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`刪除「${activity.title}」？`}
+        description="這個行程與它的圖片都會一起刪除，無法復原。"
+        confirmLabel="刪除"
+        destructive
+        onConfirm={remove}
+      />
     </article>
   )
 }

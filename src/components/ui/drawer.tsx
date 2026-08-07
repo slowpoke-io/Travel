@@ -6,9 +6,28 @@ import { Drawer as DrawerPrimitive } from 'vaul'
 import { cn } from '@/lib/utils'
 
 function Drawer({
+  busy = false,
+  dismissible,
+  onOpenChange,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+}: React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  /**
+   * 送出中。擋掉往下拖、點外面與 Esc ——
+   * 否則使用者會在請求還在跑的時候關掉面板，以為取消了但其實沒有。
+   */
+  busy?: boolean
+}) {
+  return (
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      dismissible={busy ? false : dismissible}
+      onOpenChange={(next) => {
+        if (busy) return
+        onOpenChange?.(next)
+      }}
+      {...props}
+    />
+  )
 }
 
 function DrawerTrigger({

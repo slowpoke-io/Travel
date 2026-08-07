@@ -125,136 +125,146 @@ export function TripForm({
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="trip-title">旅遊名稱</Label>
-        <Input
-          id="trip-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="例：東京五日自由行"
-          maxLength={120}
-          autoFocus={mode === 'create'}
-          required
-          className="h-12 text-base"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="trip-destination">目的地</Label>
-        <Input
-          id="trip-destination"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          placeholder="例：東京"
-          maxLength={120}
-          className="h-12 text-base"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>旅遊日期</Label>
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 w-full justify-start gap-2 text-left text-base font-normal"
-            >
-              <CalendarDays className="size-4 shrink-0" aria-hidden />
-              {range?.from ? (
-                <span>
-                  {format(range.from, 'yyyy/MM/dd')}
-                  {range.to ? ` – ${format(range.to, 'MM/dd')}` : ''}
-                  <span className="text-muted-foreground ml-2 text-sm">
-                    {nights} 天
-                  </span>
-                </span>
-              ) : (
-                <span className="text-muted-foreground">選擇日期區間</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={range}
-              onSelect={setRange}
-              numberOfMonths={1}
-              locale={zhTW}
-              defaultMonth={range?.from}
-            />
-            <div className="flex justify-between border-t p-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setRange(undefined)}
-              >
-                清除
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setCalendarOpen(false)}
-              >
-                完成
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {dayCountChanged ? (
-          <p className="text-xs text-amber-600 dark:text-amber-500">
-            天數會從 {dayCountHint} 天變成 {nights} 天。
-            {nights < (dayCountHint ?? 0)
-              ? '被移除那幾天的行程會退回儲備區，不會消失。'
-              : ''}
-          </p>
-        ) : null}
-      </div>
-
-      {mode === 'create' ? (
+      {/*
+        送出中把所有欄位一起鎖住。用 fieldset 的原生 disabled 而不是逐個
+        傳 disabled —— 少一堆重複，而且日後加欄位時不會忘記。
+        原本 form 上的 space-y-6 搬到這裡，版面不變。
+      */}
+      <fieldset
+        disabled={pending}
+        className="m-0 min-w-0 space-y-6 border-0 p-0 transition-opacity disabled:opacity-60"
+      >
         <div className="space-y-2">
-          <Label>封面圖片</Label>
-          <PendingImagePicker
-            items={cover}
-            onAdd={(files) => {
-              const file = files[0]
-              if (!file) return
-              for (const c of cover) URL.revokeObjectURL(c.previewUrl)
-              setCoverFile(file)
-              setCover([
-                {
-                  id: crypto.randomUUID(),
-                  previewUrl: URL.createObjectURL(file),
-                  status: 'done',
-                  progress: 100,
-                },
-              ])
-            }}
-            onRemove={() => {
-              for (const c of cover) URL.revokeObjectURL(c.previewUrl)
-              setCover([])
-              setCoverFile(null)
-            }}
-            onReorder={setCover}
-            hasExistingCover={false}
+          <Label htmlFor="trip-title">旅遊名稱</Label>
+          <Input
+            id="trip-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="例：東京五日自由行"
+            maxLength={120}
+            autoFocus={mode === 'create'}
+            required
+            className="h-12 text-base"
           />
         </div>
-      ) : null}
 
-      <div className="space-y-2">
-        <Label htmlFor="trip-summary">備註</Label>
-        <Textarea
-          id="trip-summary"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="航班資訊、同行者、預算…"
-          rows={3}
-          maxLength={2000}
-          className="text-base"
-        />
-      </div>
+        <div className="space-y-2">
+          <Label htmlFor="trip-destination">目的地</Label>
+          <Input
+            id="trip-destination"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="例：東京"
+            maxLength={120}
+            className="h-12 text-base"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>旅遊日期</Label>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full justify-start gap-2 text-left text-base font-normal"
+              >
+                <CalendarDays className="size-4 shrink-0" aria-hidden />
+                {range?.from ? (
+                  <span>
+                    {format(range.from, 'yyyy/MM/dd')}
+                    {range.to ? ` – ${format(range.to, 'MM/dd')}` : ''}
+                    <span className="text-muted-foreground ml-2 text-sm">
+                      {nights} 天
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">選擇日期區間</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={range}
+                onSelect={setRange}
+                numberOfMonths={1}
+                locale={zhTW}
+                defaultMonth={range?.from}
+              />
+              <div className="flex justify-between border-t p-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRange(undefined)}
+                >
+                  清除
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setCalendarOpen(false)}
+                >
+                  完成
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {dayCountChanged ? (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              天數會從 {dayCountHint} 天變成 {nights} 天。
+              {nights < (dayCountHint ?? 0)
+                ? '被移除那幾天的行程會退回儲備區，不會消失。'
+                : ''}
+            </p>
+          ) : null}
+        </div>
+
+        {mode === 'create' ? (
+          <div className="space-y-2">
+            <Label>封面圖片</Label>
+            <PendingImagePicker
+              items={cover}
+              onAdd={(files) => {
+                const file = files[0]
+                if (!file) return
+                for (const c of cover) URL.revokeObjectURL(c.previewUrl)
+                setCoverFile(file)
+                setCover([
+                  {
+                    id: crypto.randomUUID(),
+                    previewUrl: URL.createObjectURL(file),
+                    status: 'done',
+                    progress: 100,
+                  },
+                ])
+              }}
+              onRemove={() => {
+                for (const c of cover) URL.revokeObjectURL(c.previewUrl)
+                setCover([])
+                setCoverFile(null)
+              }}
+              onReorder={setCover}
+              hasExistingCover={false}
+            />
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="trip-summary">備註</Label>
+          <Textarea
+            id="trip-summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="航班資訊、同行者、預算…"
+            rows={3}
+            maxLength={2000}
+            className="text-base"
+          />
+        </div>
+      </fieldset>
 
       <Button
         type="submit"

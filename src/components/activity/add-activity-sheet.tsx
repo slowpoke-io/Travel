@@ -17,6 +17,7 @@ import {
 import { categoryMeta } from '@/lib/constants'
 import type { ActivityWithRelations } from '@/lib/queries'
 import { useTripMutations } from '@/lib/use-trip-mutations'
+import { cn } from '@/lib/utils'
 
 type Mode = 'menu' | 'backlog'
 
@@ -83,6 +84,7 @@ export function AddActivitySheet({
     <>
       <Drawer
         open={open}
+        busy={pending}
         onOpenChange={(next) => {
           onOpenChange(next)
           if (!next) reset()
@@ -121,7 +123,13 @@ export function AddActivitySheet({
                 <DrawerDescription>勾選後一次加入 {dayLabel}</DrawerDescription>
               </DrawerHeader>
 
-              <ul className="flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+              <ul
+                inert={pending || undefined}
+                className={cn(
+                  'flex-1 overflow-y-auto overscroll-contain px-2 py-2 transition-opacity',
+                  pending && 'opacity-60',
+                )}
+              >
                 {backlogActivities.map((activity) => {
                   const meta = categoryMeta(activity.category)
                   const Icon = meta.icon
@@ -163,6 +171,7 @@ export function AddActivitySheet({
               <div className="pb-safe flex gap-2 border-t px-4 py-3">
                 <Button
                   variant="outline"
+                  disabled={pending}
                   onClick={() => setMode('menu')}
                   className="flex-1"
                 >

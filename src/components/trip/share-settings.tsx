@@ -5,17 +5,8 @@ import { Check, Copy, Link2, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { updateShareSettings } from '@/actions/owner/trips'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 
@@ -48,24 +39,32 @@ export function ShareSettings({
       ? `${window.location.origin}/s/${token}`
       : null
 
+  async function apply(
+    next: { enabled: boolean; canEdit: boolean; regenerate?: boolean },
+    successMessage: string,
+  ) {
+    const result = await updateShareSettings(tripId, next)
+    if (!result.ok) {
+      // 失敗時把 UI 復原成先前的狀態
+      setEnabled(enabled)
+      setCanEdit(canEdit)
+      toast.error('設定失敗', { description: result.error })
+      return false
+    }
+    setToken(result.data.token)
+    setEnabled(result.data.enabled)
+    setCanEdit(result.data.canEdit)
+    toast.success(successMessage)
+    return true
+  }
+
+  /* 開關切換走 transition；重新產生連結的等待狀態由 ConfirmDialog 自己顯示 */
   function save(
     next: { enabled: boolean; canEdit: boolean; regenerate?: boolean },
     successMessage: string,
   ) {
     startTransition(async () => {
-      const result = await updateShareSettings(tripId, next)
-      if (!result.ok) {
-        // 失敗時把 UI 復原成先前的狀態
-        setEnabled(enabled)
-        setCanEdit(canEdit)
-        toast.error('設定失敗', { description: result.error })
-        return
-      }
-      setToken(result.data.token)
-      setEnabled(result.data.enabled)
-      setCanEdit(result.data.canEdit)
-      toast.success(successMessage)
-      setConfirmRegen(false)
+      await apply(next, successMessage)
     })
   }
 
@@ -173,30 +172,19 @@ export function ShareSettings({
         </>
       ) : null}
 
-      <AlertDialog open={confirmRegen} onOpenChange={setConfirmRegen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>換一組新連結？</AlertDialogTitle>
-            <AlertDialogDescription>
-              舊的連結會立刻失效，已經拿到舊連結的人將無法再存取這趟旅遊。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                save(
-                  { enabled: true, canEdit, regenerate: true },
-                  '已產生新連結，舊連結已失效',
-                )
-              }}
-            >
-              換新連結
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmRegen}
+        onOpenChange={setConfirmRegen}
+        title="換一組新連結？"
+        description="目前的連結會立刻失效，已經分享出去的人將無法再開啟。"
+        confirmLabel="換新連結"
+        onConfirm={() =>
+          apply(
+            { enabled: true, canEdit, regenerate: true },
+            '已產生新連結，舊連結已失效',
+          )
+        }
+      />
     </div>
   )
 }

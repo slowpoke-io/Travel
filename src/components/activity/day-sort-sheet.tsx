@@ -182,6 +182,7 @@ export function DaySortSheet({
     <FullScreenSheet
       open={open}
       onOpenChange={onOpenChange}
+      busy={pending}
       title={`排序 · ${dayLabel}`}
       headerAction={
         <Button size="sm" onClick={save} disabled={pending}>

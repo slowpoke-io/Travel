@@ -2,23 +2,14 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
-import { ImageOff, Loader2, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { ImageOff, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { deleteImage } from '@/actions/owner/images'
 import { ImagePickerButton } from '@/components/image/image-picker-button'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { getImageUrl } from '@/lib/image-url'
 import type { ImageRow } from '@/lib/supabase/database.types'
 
@@ -40,23 +31,20 @@ export function TripCoverManager({
   cover: ImageRow | null
 }) {
   const router = useRouter()
-  const [pending, startTransition] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const url = cover ? getImageUrl(cover.path) : null
 
-  function remove() {
-    if (!cover) return
-    startTransition(async () => {
-      const result = await deleteImage(tripId, cover.id)
-      if (!result.ok) {
-        toast.error('刪除失敗', { description: result.error })
-        return
-      }
-      toast.success('已移除封面')
-      setConfirmOpen(false)
-      router.refresh()
-    })
+  async function remove() {
+    if (!cover) return false
+    const result = await deleteImage(tripId, cover.id)
+    if (!result.ok) {
+      toast.error('刪除失敗', { description: result.error })
+      return false
+    }
+    toast.success('已移除封面')
+    router.refresh()
+    return true
   }
 
   return (
@@ -85,21 +73,14 @@ export function TripCoverManager({
           因此要先刪掉舊的。
         */}
         {cover ? (
-          <>
-            <Button
-              variant="outline"
-              disabled={pending}
-              onClick={() => setConfirmOpen(true)}
-              className="flex-1 gap-2"
-            >
-              {pending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Trash2 className="size-4" aria-hidden />
-              )}
-              移除封面
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmOpen(true)}
+            className="flex-1 gap-2"
+          >
+            <Trash2 className="size-4" aria-hidden />
+            移除封面
+          </Button>
         ) : (
           <ImagePickerButton
             activityId={null}
@@ -111,28 +92,15 @@ export function TripCoverManager({
         )}
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>移除旅遊封面？</AlertDialogTitle>
-            <AlertDialogDescription>
-              圖片檔案會一併從儲存空間刪除。行程本身不受影響。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                remove()
-              }}
-              className="bg-destructive hover:bg-destructive/90 text-white"
-            >
-              移除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="移除旅遊封面？"
+        description="圖片檔案會一併從儲存空間刪除。行程本身不受影響。"
+        confirmLabel="移除"
+        destructive
+        onConfirm={remove}
+      />
     </div>
   )
 }

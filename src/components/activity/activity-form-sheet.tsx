@@ -98,10 +98,17 @@ export function ActivityFormSheet({
   onSaved,
   onCreated,
 }: Props) {
+  /*
+    送出／上傳中的狀態在表單本體裡，但要鎖住的是整個面板（含關閉鈕），
+    所以由本體往上回報。
+  */
+  const [busy, setBusy] = useState(false)
+
   return (
     <FullScreenSheet
       open={open}
       onOpenChange={onOpenChange}
+      busy={busy}
       title={activity ? '編輯行程' : dayId ? '新增行程' : '新增到儲備區'}
     >
       {/*
@@ -116,6 +123,7 @@ export function ActivityFormSheet({
         tags={tags}
         placeSearchEnabled={placeSearchEnabled}
         onOpenChange={onOpenChange}
+        onBusyChange={setBusy}
         onSaved={onSaved}
         onCreated={onCreated}
       />
@@ -129,9 +137,10 @@ function ActivityFormBody({
   tags,
   placeSearchEnabled,
   onOpenChange,
+  onBusyChange,
   onSaved,
   onCreated,
-}: Omit<Props, 'open'>) {
+}: Omit<Props, 'open'> & { onBusyChange: (busy: boolean) => void }) {
   const mutations = useTripMutations()
   const { tripId } = useTripAccess()
   // 選好圖片就開始傳，不用等按下送出
@@ -165,6 +174,12 @@ function ActivityFormBody({
   )
   // 還有圖片在傳的話不讓送出 —— 送出去也寫不進 images
   const busy = pending || uploads.uploading
+
+  // 面板的鎖定由外層負責（要連關閉鈕一起停用），把狀態往上送
+  useEffect(() => {
+    onBusyChange(busy)
+    return () => onBusyChange(false)
+  }, [busy, onBusyChange])
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))

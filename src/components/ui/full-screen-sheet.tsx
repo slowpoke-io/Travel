@@ -28,6 +28,7 @@ export function FullScreenSheet({
   children,
   footer,
   className,
+  busy = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -37,12 +38,18 @@ export function FullScreenSheet({
   children: React.ReactNode
   footer?: React.ReactNode
   className?: string
+  /**
+   * 送出中。會擋掉面板內的所有互動並停用關閉鈕 ——
+   * 否則使用者可以在送出的同時改欄位、或關掉面板讓請求變成孤兒。
+   */
+  busy?: boolean
 }) {
   useEffect(() => {
     if (!open) return
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onOpenChange(false)
+      // 送出中按 Esc 不關閉，否則會讓人以為取消了但請求還在跑
+      if (e.key === 'Escape' && !busy) onOpenChange(false)
     }
     window.addEventListener('keydown', onKey)
 
@@ -54,7 +61,7 @@ export function FullScreenSheet({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
     }
-  }, [open, onOpenChange])
+  }, [open, onOpenChange, busy])
 
   if (!open) return null
 
@@ -73,6 +80,7 @@ export function FullScreenSheet({
           variant="ghost"
           size="icon"
           onClick={() => onOpenChange(false)}
+          disabled={busy}
           aria-label="關閉"
           className="shrink-0"
         >
@@ -84,7 +92,17 @@ export function FullScreenSheet({
         {headerAction}
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/*
+        送出中擋掉整個內容區的互動。用 inert 而不是只做視覺淡化 ——
+        淡化擋不住點擊，使用者仍然可以改欄位或觸發其他操作。
+      */}
+      <div
+        inert={busy || undefined}
+        className={cn(
+          'flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity',
+          busy && 'pointer-events-none opacity-60',
+        )}
+      >
         {children}
       </div>
 
