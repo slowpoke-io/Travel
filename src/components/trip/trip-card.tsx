@@ -14,7 +14,9 @@ export function TripCard({ trip }: { trip: TripListItem }) {
 
   return (
     <Link
-      href={`/trips/${trip.id}`}
+      // 點旅遊直接進「行程」分頁 —— 那是實際會待著的地方。
+      // 概覽仍在，從內頁上方的標題點進去。
+      href={`/trips/${trip.id}/d/1`}
       className="group focus-visible:ring-ring bg-card block overflow-hidden rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none active:opacity-90"
     >
       <div className="bg-muted relative aspect-[16/9] w-full">

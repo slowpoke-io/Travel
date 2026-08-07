@@ -27,6 +27,15 @@ export function BottomNav() {
   const current = tripViewFromPathname(pathname)
 
   /*
+    只有「已經在三個分頁的路由上」才能用 pushState 切換 —— 那時候
+    TripTabs 已經掛好了，改網址它就會換渲染哪個 view。
+
+    在設定頁、概覽頁、行程詳情頁時掛的是別的路由，光改網址畫面不會動
+    （按了完全沒反應），這種情況必須走 Next 的導航把 TripTabs 帶進來。
+  */
+  const inTabRoute = isTabRoute(pathname)
+
+  /*
     記住最後看的是第幾天，從儲備區或地圖點回「行程」時才會回到原本那天，
     而不是每次都跳回 Day 1。
 
@@ -60,18 +69,19 @@ export function BottomNav() {
       <ul className="flex">
         {tabs.map(({ tab, view, label, icon: Icon }) => {
           // 在設定頁或行程詳情頁時，三個分頁都不該亮
-          const active = !onSettings && isTabRoute(pathname) && current.tab === tab
+          const active = !onSettings && inTabRoute && current.tab === tab
           return (
             <li key={tab} className="flex-1">
               {/*
-                用 <a> 而不是 <Link>：這三個分頁的資料在同一份 bundle 裡已經
-                全部拿到了，走 Next 的導航只會讓伺服器把同樣的查詢重跑一次，
-                換來一段空白。這裡攔下點擊改用 pushState，切換是瞬間的。
-                href 保留著，長按複製連結、在新分頁開啟都照常。
+                已經在分頁路由上時攔下點擊改用 pushState —— 資料都在手上了，
+                走導航只會讓伺服器把同樣的查詢重跑一次，換來一段空白。
+                不在分頁路由上時就讓 Link 正常導航，順便預取。
               */}
-              <a
+              <Link
                 href={tripViewHref(base, view)}
+                prefetch={!inTabRoute}
                 onClick={(e) => {
+                  if (!inTabRoute) return
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
                   e.preventDefault()
                   pushTripView(base, view)
@@ -81,7 +91,7 @@ export function BottomNav() {
               >
                 <Icon className={cn('size-5', active && 'stroke-[2.5]')} aria-hidden />
                 {label}
-              </a>
+              </Link>
             </li>
           )
         })}
