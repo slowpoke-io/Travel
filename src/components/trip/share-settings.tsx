@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useSyncExternalStore, useTransition } from 'react'
 import { Check, Copy, Link2, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -34,10 +34,24 @@ export function ShareSettings({
   const [copied, setCopied] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
 
-  const shareUrl =
-    token && typeof window !== 'undefined'
-      ? `${window.location.origin}/s/${token}`
-      : null
+  /*
+    網址的 origin。
+
+    原本寫 `typeof window !== 'undefined'`，那會讓伺服器渲染出「沒有連結」、
+    client 第一次渲染卻是「有連結」—— 兩邊對不起來就是 hydration error
+    （React #418），而且只有在真的產生過分享連結時才會發生。
+
+    useSyncExternalStore 就是為這種「server 與 client 有不同快照」的值準備的：
+    伺服器端用 null，hydrate 完成後 React 自己換成真正的 origin。
+    origin 在頁面生命週期內不會變，所以訂閱函式什麼都不用做。
+  */
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => null,
+  )
+
+  const shareUrl = token && origin ? `${origin}/s/${token}` : null
 
   async function apply(
     next: { enabled: boolean; canEdit: boolean; regenerate?: boolean },

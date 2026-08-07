@@ -15,7 +15,14 @@ import { serwist } from '@serwist/next/config'
 export default serwist.withNextConfig(() => ({
   swSrc: 'src/app/sw.ts',
   swDest: 'public/sw.js',
-  // 離線頁要先快取起來，否則斷線時連 fallback 都拿不到
-  additionalPrecacheEntries: [{ url: '/offline', revision: null }],
+  /*
+    離線頁由 precachePrerendered 一併收進來就好，不要再自己加一次。
+
+    /offline 是預先渲染的靜態頁，precachePrerendered 會帶著 revision hash
+    把它放進 manifest。如果這裡再補一筆 { url: '/offline', revision: null }，
+    同一個 URL 就會出現兩筆不同 revision 的項目，Serwist 會丟出
+    add-to-cache-list-conflicting-entries —— 那是在 Service Worker 的
+    最上層丟出來的，整個 SW 註冊直接失敗，PWA 與離線快取全部不會生效。
+  */
   precachePrerendered: true,
 }))

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useTransition } from 'react'
 import { Loader2 } from 'lucide-react'
 
 import {
@@ -53,17 +53,24 @@ export function ConfirmDialog({
   /** 額外的內容，例如確認用的輸入框 */
   children?: React.ReactNode
 }) {
-  const [pending, setPending] = useState(false)
+  /*
+    一定要用 useTransition 而不是自己的 boolean。
 
-  async function run() {
+    Server Action 內的 revalidatePath 會讓 Next 重新渲染畫面，而那次更新是
+    掛在呼叫它的 transition 上的。在 transition 外面呼叫，重新渲染就不會被
+    套用 —— 資料真的改了，畫面卻停在原地。
+
+    順帶的好處：isPending 會一路 true 到新畫面真的 commit，所以轉圈是轉到
+    「東西真的消失了」為止，而不是伺服器一回應就停。
+  */
+  const [pending, startTransition] = useTransition()
+
+  function run() {
     if (pending) return
-    setPending(true)
-    try {
+    startTransition(async () => {
       const result = await onConfirm()
       if (result !== false) onOpenChange(false)
-    } finally {
-      setPending(false)
-    }
+    })
   }
 
   return (

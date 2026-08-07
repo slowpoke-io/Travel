@@ -1,33 +1,35 @@
 import { notFound } from 'next/navigation'
 
-import { DayView } from '@/components/trip/day-view'
+import { TripTabs } from '@/components/trip/trip-tabs'
+import { parseFilters } from '@/lib/activity-filters'
 import { isPlaceSearchEnabled } from '@/lib/env'
 import { findDay, getShareTripContext } from '@/lib/trip-context'
+import { parseTripView } from '@/lib/trip-nav'
 import { buildTripViewModel } from '@/lib/trip-view-model'
-import { parseFilters } from '@/lib/activity-filters'
 
 export const metadata = { robots: { index: false, follow: false } }
 
+/** 分享連結版本。與擁有者路徑共用 TripTabs，差別只在資料來源與權限。 */
 export default async function Page({
   params,
   searchParams,
 }: {
-  params: Promise<{ token: string; dayIndex: string }>
+  params: Promise<{ token: string; view: string[] }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { token, dayIndex } = await params
-  const index = Number(dayIndex)
-  if (!Number.isInteger(index) || index < 1) notFound()
+  const { token, view } = await params
+  const parsed = parseTripView(view)
+  if (!parsed) notFound()
 
   const { bundle } = await getShareTripContext(token)
-  const day = findDay(bundle, index)
+  if (parsed.tab === 'day') findDay(bundle, parsed.dayIndex)
+
   const vm = buildTripViewModel(bundle)
 
   return (
-    <DayView
+    <TripTabs
       days={bundle.days}
       activitiesByDay={Object.fromEntries(vm.byDay)}
-      initialDayIndex={day.day_index}
       backlogActivities={vm.backlog}
       tags={bundle.tags}
       counts={vm.counts}

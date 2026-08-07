@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowUpDown, MapIcon, Plus } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activity/activity-card'
@@ -19,6 +19,7 @@ import { dayColor } from '@/lib/constants'
 import { formatFullDate } from '@/lib/format'
 import type { ActivityWithRelations } from '@/lib/queries'
 import type { ActivityFilters } from '@/lib/activity-filters'
+import { pushTripView } from '@/lib/trip-nav'
 import { useActivityFilters } from '@/lib/use-activity-filters'
 import type {
   ActivityCategory,
@@ -35,8 +36,8 @@ type Props = {
   counts: Record<string, number>
   placeSearchEnabled: boolean
   initialFilters: ActivityFilters
-  /** 由網址決定的初始日期；之後的切換由 client 端接手 */
-  initialDayIndex: number
+  /** 目前是第幾天。由網址推導出來（見 trip-nav.ts），不是自己存的狀態 */
+  dayIndex: number
 }
 
 export function DayView({
@@ -47,48 +48,19 @@ export function DayView({
   counts,
   placeSearchEnabled,
   initialFilters,
-  initialDayIndex,
+  dayIndex,
 }: Props) {
   const router = useRouter()
   const base = useBasePath()
   const { canEdit } = useTripAccess()
 
   /*
-    切換日期不做導航。
-
-    每一天的資料在同一份 bundle 裡就全拿到了，走 <Link> 換頁只會讓伺服器
-    把同樣的 6 個查詢重跑一次，換來一段空白。改成 client 端切換 +
-    history.pushState 同步網址：切換是瞬間的，但網址仍然可以分享、
-    上一頁也照常運作。
+    切換日期不做導航 —— 只改網址，Next 會把 pushState 同步到 usePathname，
+    上層的 TripTabs 因此重新算出新的 dayIndex 傳下來。
+    每一天的資料本來就在同一份 bundle 裡，不需要問伺服器任何事。
   */
-  const [dayIndex, setDayIndex] = useState(initialDayIndex)
-
-  // 真正的導航（深連結、底部導覽）才會換 initialDayIndex，此時跟著網址走。
-  // 在 render 期間調整自己的狀態是 React 官方認可的作法，不會有串連渲染。
-  const [lastInitial, setLastInitial] = useState(initialDayIndex)
-  if (initialDayIndex !== lastInitial) {
-    setLastInitial(initialDayIndex)
-    setDayIndex(initialDayIndex)
-  }
-
-  useEffect(() => {
-    function onPop() {
-      const m = window.location.pathname.match(/\/d\/(\d+)/)
-      if (m) setDayIndex(Number(m[1]))
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-
   function selectDay(next: number) {
-    if (next === dayIndex) return
-    setDayIndex(next)
-    // 只換網址，不觸發 Next 的導航與資料重取
-    window.history.pushState(
-      null,
-      '',
-      `${base}/d/${next}${window.location.search}`,
-    )
+    pushTripView(base, { tab: 'day', dayIndex: next })
   }
 
   /*
