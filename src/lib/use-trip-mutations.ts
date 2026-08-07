@@ -13,6 +13,7 @@ import {
 import {
   commitImages as ownerCommitImages,
   deleteImage as ownerDeleteImage,
+  discardPendingUploads as ownerDiscardPendingUploads,
   requestUploadSlots as ownerRequestUploadSlots,
   setCoverImage as ownerSetCoverImage,
 } from '@/actions/owner/images'
@@ -27,6 +28,7 @@ import {
 import {
   guestCommitImages,
   guestDeleteImage,
+  guestDiscardPendingUploads,
   guestRequestUploadSlots,
   guestSetCoverImage,
 } from '@/actions/share/images'
@@ -91,6 +93,9 @@ export function useTripMutations() {
         setCoverImage: guard((imageId: string) =>
           ownerSetCoverImage(tripId, imageId),
         ),
+        discardPendingUploads: guard((paths: string[]) =>
+          ownerDiscardPendingUploads(tripId, paths),
+        ),
       }
     }
 
@@ -125,6 +130,9 @@ export function useTripMutations() {
       deleteImage: guard((imageId: string) => guestDeleteImage(token, imageId)),
       setCoverImage: guard((imageId: string) =>
         guestSetCoverImage(token, imageId),
+      ),
+      discardPendingUploads: guard((paths: string[]) =>
+        guestDiscardPendingUploads(token, paths),
       ),
     }
   }, [access])

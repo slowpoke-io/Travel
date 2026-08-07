@@ -154,7 +154,6 @@ export function ImageGallery({
                   onUploaded={() => router.refresh()}
                 />
               ) : null}
-
             </TabsContent>
           )
         })}

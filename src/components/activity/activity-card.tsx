@@ -88,7 +88,7 @@ export function ActivityCard({
   return (
     <article
       className={cn(
-        'bg-card animate-in fade-in slide-in-from-bottom-1 relative overflow-hidden rounded-xl border transition-opacity duration-200',
+        'bg-card relative overflow-hidden rounded-xl border transition-opacity',
         pending && 'opacity-60',
       )}
     >

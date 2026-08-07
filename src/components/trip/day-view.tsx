@@ -98,6 +98,9 @@ export function DayView({
     建立成功之後仍要 router.refresh() 才拿得到伺服器版本的資料，中間有一段
     空窗，看起來像「送出了但沒反應」。這裡先用手邊已有的輸入內容把卡片畫出來，
     等真正的資料回來（id 出現在 props 裡）再把暫時的那筆移除。
+
+    暫時的那筆用的是伺服器回傳的 id，所以真實資料回來時 React 認得是同一個
+    元素，只會更新內容、不會重新掛載 —— 卡片因此不會再跑一次進場動畫。
   */
   const [optimistic, setOptimistic] = useState<ActivityWithRelations[]>([])
   const serverIds = new Set(

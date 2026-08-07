@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { Loader2, MapPin, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -143,6 +143,18 @@ function ActivityFormBody({
   const [localTags, setLocalTags] = useState<TagRow[]>(tags)
 
   const isEdit = Boolean(activity)
+
+  /*
+    表單被關掉（而不是送出成功）時，把已經傳上去但沒用到的檔案刪掉。
+    送出成功的路徑會先呼叫 clear(false)，把清單清空，所以這裡不會誤刪。
+  */
+  const uploadsRef = useRef(uploads)
+  useEffect(() => {
+    uploadsRef.current = uploads
+  }, [uploads])
+  useEffect(() => {
+    return () => uploadsRef.current.clear(true)
+  }, [])
   const hasExistingCover = Boolean(
     activity?.images.some((i) => i.role === 'cover'),
   )
@@ -241,6 +253,9 @@ function ActivityFormBody({
           images: [],
         } as unknown as ActivityWithRelations)
       }
+
+      // 這些檔案已經有 images 資料列指向了，不能當成廢棄檔案刪掉
+      uploads.clear(false)
 
       toast.success(isEdit ? '已儲存' : '已新增行程')
       onOpenChange(false)
@@ -533,16 +548,21 @@ function ActivityFormBody({
       </div>
 
       <div className="pb-safe border-t px-4 py-3">
+        {/*
+          按鈕的文字固定不變。之前上傳時會換成「圖片上傳中…」，寬度一改
+          整顆按鈕就跳動一下，看起來像閃爍。改成只在左側補一個轉圈圖示，
+          並用 transition 讓停用時的淡化平順帶過。
+        */}
         <Button
           type="submit"
           size="lg"
           disabled={busy}
-          className="h-12 w-full text-base"
+          className="h-12 w-full text-base transition-opacity"
         >
           {busy ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
           ) : null}
-          {uploads.uploading ? '圖片上傳中…' : isEdit ? '儲存' : '新增'}
+          {isEdit ? '儲存' : '新增'}
         </Button>
       </div>
     </form>

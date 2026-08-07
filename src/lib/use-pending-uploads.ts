@@ -28,8 +28,8 @@ const MAX = 10
  *
  * 這樣使用者可以在上傳的同時繼續填其他欄位，不必填完再乾等一次。
  * 檔案先進 Storage，資料列則等到表單送出、行程／旅遊真的存在之後才寫入
- * （images 的外鍵需要對象）。中途放棄的話檔案會變成孤兒，由
- * scripts/cleanup-orphan-media.ts 負責清理 —— 這是換取「邊填邊傳」的代價。
+ * （images 的外鍵需要對象）。刪掉預覽或放棄整張表單時會把已上傳的檔案一併
+ * 刪除，不留孤兒。
  */
 export function usePendingUploads(tripId: string | null) {
   const mutations = useTripMutations()
@@ -46,14 +46,9 @@ export function usePendingUploads(tripId: string | null) {
     }
   }, [])
 
-  const update = useCallback(
-    (id: string, patch: Partial<PendingUpload>) => {
-      setItems((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, ...patch } : i)),
-      )
-    },
-    [],
-  )
+  const update = useCallback((id: string, patch: Partial<PendingUpload>) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+  }, [])
 
   const add = useCallback(
     async (files: File[]) => {
@@ -74,7 +69,8 @@ export function usePendingUploads(tripId: string | null) {
 
       if (!tripId) {
         // 建立旅遊時還沒有 tripId，只能等送出後再傳
-        for (const b of batch) update(b.entry.id, { status: 'done', progress: 100 })
+        for (const b of batch)
+          update(b.entry.id, { status: 'done', progress: 100 })
         return
       }
 
@@ -136,20 +132,47 @@ export function usePendingUploads(tripId: string | null) {
     [tripId, mutations, update],
   )
 
-  const remove = useCallback((id: string) => {
-    setItems((prev) => {
-      const target = prev.find((i) => i.id === id)
-      if (target) URL.revokeObjectURL(target.previewUrl)
-      return prev.filter((i) => i.id !== id)
-    })
-  }, [])
+  /**
+   * 移除一張。若它已經傳進 Storage，一併把檔案刪掉 ——
+   * 不刪的話它沒有任何 images 資料列指向，會變成使用者看不到也刪不掉的孤兒。
+   */
+  const remove = useCallback(
+    (id: string) => {
+      const target = itemsRef.current.find((i) => i.id === id)
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl)
+        const paths = [
+          target.committed?.path,
+          target.committed?.thumbPath,
+        ].filter((p): p is string => Boolean(p))
+        if (paths.length) void mutations.discardPendingUploads(paths)
+      }
+      setItems((prev) => prev.filter((i) => i.id !== id))
+    },
+    [mutations],
+  )
 
   const reorder = useCallback((next: PendingUpload[]) => setItems(next), [])
 
-  const clear = useCallback(() => {
-    for (const i of itemsRef.current) URL.revokeObjectURL(i.previewUrl)
-    setItems([])
-  }, [])
+  /**
+   * 全部清掉。`discard` 為 true 時（放棄表單）連 Storage 的檔案一起刪；
+   * 送出成功後呼叫則要傳 false —— 那些檔案已經有 images 資料列指向了。
+   */
+  const clear = useCallback(
+    (discard = false) => {
+      const paths: string[] = []
+      for (const i of itemsRef.current) {
+        URL.revokeObjectURL(i.previewUrl)
+        if (discard && i.committed) {
+          paths.push(i.committed.path)
+          if (i.committed.thumbPath) paths.push(i.committed.thumbPath)
+        }
+      }
+      if (paths.length) void mutations.discardPendingUploads(paths)
+      setItems([])
+    },
+    [mutations],
+  )
 
   /** 還有東西在傳的話，表單的送出按鈕要維持停用 */
   const uploading = items.some((i) => i.status === 'uploading')

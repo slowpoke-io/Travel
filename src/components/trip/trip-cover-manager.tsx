@@ -111,7 +111,6 @@ export function TripCoverManager({
         )}
       </div>
 
-
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

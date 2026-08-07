@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { failFrom, ok, type ActionResult } from '@/lib/action-result'
 import * as core from '@/lib/mutations/images'
+import { discardUploads } from '@/lib/mutations/discard-upload'
 import { requireShareEdit } from '@/lib/share/guard'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -74,5 +75,19 @@ export async function guestSetCoverImage(
     return ok()
   } catch (e) {
     return failFrom('guestSetCoverImage', e)
+  }
+}
+
+/** 訪客版本；tripId 一樣取自已驗證的 share context，不從參數來 */
+export async function guestDiscardPendingUploads(
+  token: string,
+  paths: string[],
+): Promise<ActionResult> {
+  try {
+    const { tripId, supabase } = await guestContext(token)
+    await discardUploads(supabase, { tripId, paths })
+    return ok()
+  } catch (e) {
+    return failFrom('guestDiscardPendingUploads', e)
   }
 }

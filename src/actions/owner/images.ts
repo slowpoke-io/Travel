@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { failFrom, ok, type ActionResult } from '@/lib/action-result'
 import { requireUser } from '@/lib/auth'
 import * as core from '@/lib/mutations/images'
+import { discardUploads } from '@/lib/mutations/discard-upload'
 import { createClient } from '@/lib/supabase/server'
 import type { ImageRole } from '@/lib/supabase/database.types'
 
@@ -105,5 +106,22 @@ export async function updateImageRole(
     return ok()
   } catch (e) {
     return failFrom('updateImageRole', e)
+  }
+}
+
+/**
+ * 丟棄已上傳但還沒寫進 images 的檔案（使用者把預覽刪掉、或關掉表單）。
+ * 不做這件事的話那些檔案會變成孤兒。
+ */
+export async function discardPendingUploads(
+  tripId: string,
+  paths: string[],
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await ownerContext(tripId)
+    await discardUploads(supabase, { tripId, paths })
+    return ok()
+  } catch (e) {
+    return failFrom('discardPendingUploads', e)
   }
 }

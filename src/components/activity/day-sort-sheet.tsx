@@ -250,7 +250,6 @@ export function DaySortSheet({
           ) : null}
         </DragOverlay>
       </DndContext>
-
     </FullScreenSheet>
   )
 }
