@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowUpDown, MapIcon, Plus } from 'lucide-react'
 
@@ -8,11 +8,7 @@ import { ActivityCard } from '@/components/activity/activity-card'
 import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
 import { AddActivitySheet } from '@/components/activity/add-activity-sheet'
 import { DaySortSheet } from '@/components/activity/day-sort-sheet'
-import {
-  applyFilters,
-  FilterBar,
-  parseFilters,
-} from '@/components/activity/filter-bar'
+import { applyFilters, FilterBar } from '@/components/activity/filter-bar'
 import { MoveToSheet } from '@/components/activity/move-to-sheet'
 import { AddImageSheet } from '@/components/image/add-image-sheet'
 import { ActivityMap, toMappedActivities } from '@/components/map/activity-map'
@@ -22,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { dayColor } from '@/lib/constants'
 import { formatFullDate } from '@/lib/format'
 import type { ActivityWithRelations } from '@/lib/queries'
+import type { ActivityFilters } from '@/lib/activity-filters'
+import { useActivityFilters } from '@/lib/use-activity-filters'
 import type {
   ActivityCategory,
   TagRow,
@@ -36,6 +34,7 @@ type Props = {
   tags: TagRow[]
   counts: Record<string, number>
   placeSearchEnabled: boolean
+  initialFilters: ActivityFilters
   /** 由網址決定的初始日期；之後的切換由 client 端接手 */
   initialDayIndex: number
 }
@@ -47,10 +46,10 @@ export function DayView({
   tags,
   counts,
   placeSearchEnabled,
+  initialFilters,
   initialDayIndex,
 }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const base = useBasePath()
   const { canEdit } = useTripAccess()
 
@@ -131,10 +130,8 @@ export function DayView({
   const [moving, setMoving] = useState<ActivityWithRelations | null>(null)
   const [imageTarget, setImageTarget] = useState<string | null>(null)
 
-  const filters = useMemo(
-    () => parseFilters(new URLSearchParams(searchParams.toString())),
-    [searchParams],
-  )
+  const { filters, toggleCategory, toggleTag, clear, active } =
+    useActivityFilters(initialFilters)
   const visible = useMemo(
     () => applyFilters(dayActivities, filters),
     [dayActivities, filters],
@@ -149,8 +146,6 @@ export function DayView({
     () => toMappedActivities(dayActivities, dayColor(currentDay.day_index)),
     [dayActivities, currentDay.day_index],
   )
-
-  const isFiltered = filters.categories.length > 0 || filters.tagIds.length > 0
 
   /**
    * 儲備區是空的時候，選單只剩「建立新行程」一個有意義的選項，
@@ -170,7 +165,15 @@ export function DayView({
         onSelect={selectDay}
       />
 
-      <FilterBar tags={tags} availableCategories={availableCategories} />
+      <FilterBar
+        tags={tags}
+        availableCategories={availableCategories}
+        filters={filters}
+        onToggleCategory={toggleCategory}
+        onToggleTag={toggleTag}
+        onClear={clear}
+        active={active}
+      />
 
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div className="min-w-0">
@@ -199,11 +202,7 @@ export function DayView({
 
       <main className="space-y-3 px-4 pb-24">
         {visible.length === 0 ? (
-          <EmptyDay
-            filtered={isFiltered}
-            canEdit={canEdit}
-            onAdd={startAdding}
-          />
+          <EmptyDay filtered={active} canEdit={canEdit} onAdd={startAdding} />
         ) : (
           visible.map((activity) => (
             <ActivityCard
@@ -219,7 +218,7 @@ export function DayView({
           ))
         )}
 
-        {isFiltered && visible.length < dayActivities.length ? (
+        {active && visible.length < dayActivities.length ? (
           <p className="text-muted-foreground pt-2 text-center text-xs">
             篩選中，隱藏了 {dayActivities.length - visible.length} 個行程
           </p>

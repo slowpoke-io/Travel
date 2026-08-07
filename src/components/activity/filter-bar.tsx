@@ -1,28 +1,12 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
 import { X } from 'lucide-react'
 
 import { CATEGORIES, tagColorClass } from '@/lib/constants'
-import type { ActivityCategory, TagRow } from '@/lib/supabase/database.types'
 import type { ActivityWithRelations } from '@/lib/queries'
+import type { ActivityCategory, TagRow } from '@/lib/supabase/database.types'
+import type { ActivityFilters } from '@/lib/activity-filters'
 import { cn } from '@/lib/utils'
-
-export type ActivityFilters = {
-  categories: ActivityCategory[]
-  tagIds: string[]
-}
-
-/** 從 URL search params 讀出篩選條件 */
-export function parseFilters(params: URLSearchParams): ActivityFilters {
-  const cats = params.get('cat')?.split(',').filter(Boolean) ?? []
-  const valid = new Set(CATEGORIES.map((c) => c.value as string))
-  return {
-    categories: cats.filter((c) => valid.has(c)) as ActivityCategory[],
-    tagIds: params.get('tag')?.split(',').filter(Boolean) ?? [],
-  }
-}
 
 export function applyFilters(
   activities: ActivityWithRelations[],
@@ -45,50 +29,32 @@ export function applyFilters(
 }
 
 /**
- * 篩選列。狀態存在 URL search params，所以切換日期、進出行程詳情、
- * 甚至重新整理之後篩選條件都還在。
+ * 篩選列。
+ *
+ * 純受控元件 —— 狀態由 useActivityFilters 持有，切換是即時的 client 運算，
+ * 不做任何導航。
  */
 export function FilterBar({
   tags,
   /** 只顯示這一天實際出現過的分類，避免一整排用不到的選項 */
   availableCategories,
+  filters,
+  onToggleCategory,
+  onToggleTag,
+  onClear,
+  active,
 }: {
   tags: TagRow[]
   availableCategories: Set<ActivityCategory>
+  filters: ActivityFilters
+  onToggleCategory: (value: ActivityCategory) => void
+  onToggleTag: (id: string) => void
+  onClear: () => void
+  active: boolean
 }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  const filters = useMemo(
-    () => parseFilters(new URLSearchParams(searchParams.toString())),
-    [searchParams],
-  )
-
-  const update = useCallback(
-    (key: 'cat' | 'tag', values: string[]) => {
-      const next = new URLSearchParams(searchParams.toString())
-      if (values.length) next.set(key, values.join(','))
-      else next.delete(key)
-      const qs = next.toString()
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-    },
-    [router, pathname, searchParams],
-  )
-
-  const toggle = (key: 'cat' | 'tag', current: string[], value: string) => {
-    update(
-      key,
-      current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value],
-    )
-  }
-
   const visibleCategories = CATEGORIES.filter((c) =>
     availableCategories.has(c.value),
   )
-  const hasFilters = filters.categories.length > 0 || filters.tagIds.length > 0
 
   // 分類只有一種時篩選沒有意義
   if (visibleCategories.length <= 1 && tags.length === 0) return null
@@ -96,18 +62,10 @@ export function FilterBar({
   return (
     <div className="no-scrollbar overflow-x-auto border-b">
       <div className="flex w-max items-center gap-1.5 px-4 py-2">
-        {hasFilters ? (
+        {active ? (
           <button
             type="button"
-            onClick={() => {
-              const next = new URLSearchParams(searchParams.toString())
-              next.delete('cat')
-              next.delete('tag')
-              const qs = next.toString()
-              router.replace(qs ? `${pathname}?${qs}` : pathname, {
-                scroll: false,
-              })
-            }}
+            onClick={onClear}
             className="bg-foreground text-background inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium"
           >
             <X className="size-3" aria-hidden />
@@ -118,17 +76,17 @@ export function FilterBar({
         {visibleCategories.length > 1
           ? visibleCategories.map((cat) => {
               const Icon = cat.icon
-              const active = filters.categories.includes(cat.value)
+              const on = filters.categories.includes(cat.value)
               return (
                 <button
                   key={cat.value}
                   type="button"
-                  onClick={() => toggle('cat', filters.categories, cat.value)}
-                  aria-pressed={active}
+                  onClick={() => onToggleCategory(cat.value)}
+                  aria-pressed={on}
                   className={cn(
                     'inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-all',
                     cat.chip,
-                    active ? 'ring-foreground/40 ring-2' : 'opacity-55',
+                    on ? 'ring-foreground/40 ring-2' : 'opacity-55',
                   )}
                 >
                   <Icon className="size-3" aria-hidden />
@@ -139,17 +97,17 @@ export function FilterBar({
           : null}
 
         {tags.map((tag) => {
-          const active = filters.tagIds.includes(tag.id)
+          const on = filters.tagIds.includes(tag.id)
           return (
             <button
               key={tag.id}
               type="button"
-              onClick={() => toggle('tag', filters.tagIds, tag.id)}
-              aria-pressed={active}
+              onClick={() => onToggleTag(tag.id)}
+              aria-pressed={on}
               className={cn(
                 'inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-all',
                 tagColorClass(tag.color),
-                active ? 'ring-foreground/40 ring-2' : 'opacity-55',
+                on ? 'ring-foreground/40 ring-2' : 'opacity-55',
               )}
             >
               {tag.name}

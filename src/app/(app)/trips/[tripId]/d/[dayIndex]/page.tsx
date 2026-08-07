@@ -4,6 +4,7 @@ import { DayView } from '@/components/trip/day-view'
 import { isPlaceSearchEnabled } from '@/lib/env'
 import { findDay, getOwnerTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
+import { parseFilters } from '@/lib/activity-filters'
 
 export async function generateMetadata({
   params,
@@ -15,10 +16,12 @@ export async function generateMetadata({
   return { title: `Day ${dayIndex} · ${bundle.trip.title}` }
 }
 
-export default async function DayPage({
+export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ tripId: string; dayIndex: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { tripId, dayIndex } = await params
   const index = Number(dayIndex)
@@ -37,6 +40,7 @@ export default async function DayPage({
       tags={bundle.tags}
       counts={vm.counts}
       placeSearchEnabled={isPlaceSearchEnabled()}
+      initialFilters={parseFilters(await searchParams)}
     />
   )
 }

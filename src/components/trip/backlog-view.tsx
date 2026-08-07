@@ -1,22 +1,20 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { CheckSquare, Inbox, Plus, X } from 'lucide-react'
 
 import { ActivityCard } from '@/components/activity/activity-card'
 import { ActivityFormSheet } from '@/components/activity/activity-form-sheet'
-import {
-  applyFilters,
-  FilterBar,
-  parseFilters,
-} from '@/components/activity/filter-bar'
+import { applyFilters, FilterBar } from '@/components/activity/filter-bar'
 import { MoveToSheet } from '@/components/activity/move-to-sheet'
 import { AddImageSheet } from '@/components/image/add-image-sheet'
 import { useTripAccess } from '@/components/trip/trip-access'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { ActivityWithRelations } from '@/lib/queries'
+import type { ActivityFilters } from '@/lib/activity-filters'
+import { useActivityFilters } from '@/lib/use-activity-filters'
 import type {
   ActivityCategory,
   TagRow,
@@ -29,15 +27,16 @@ export function BacklogView({
   tags,
   counts,
   placeSearchEnabled,
+  initialFilters,
 }: {
   days: TripDayRow[]
   backlogActivities: ActivityWithRelations[]
   tags: TagRow[]
   counts: Record<string, number>
   placeSearchEnabled: boolean
+  initialFilters: ActivityFilters
 }) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { canEdit } = useTripAccess()
 
   const [addOpen, setAddOpen] = useState(false)
@@ -47,10 +46,8 @@ export function BacklogView({
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
 
-  const filters = useMemo(
-    () => parseFilters(new URLSearchParams(searchParams.toString())),
-    [searchParams],
-  )
+  const { filters, toggleCategory, toggleTag, clear, active } =
+    useActivityFilters(initialFilters)
   const visible = useMemo(
     () => applyFilters(backlogActivities, filters),
     [backlogActivities, filters],
@@ -62,7 +59,15 @@ export function BacklogView({
 
   return (
     <>
-      <FilterBar tags={tags} availableCategories={availableCategories} />
+      <FilterBar
+        tags={tags}
+        availableCategories={availableCategories}
+        filters={filters}
+        onToggleCategory={toggleCategory}
+        onToggleTag={toggleTag}
+        onClear={clear}
+        active={active}
+      />
 
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div>

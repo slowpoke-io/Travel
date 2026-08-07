@@ -4,13 +4,16 @@ import { DayView } from '@/components/trip/day-view'
 import { isPlaceSearchEnabled } from '@/lib/env'
 import { findDay, getShareTripContext } from '@/lib/trip-context'
 import { buildTripViewModel } from '@/lib/trip-view-model'
+import { parseFilters } from '@/lib/activity-filters'
 
 export const metadata = { robots: { index: false, follow: false } }
 
-export default async function SharedDayPage({
+export default async function Page({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string; dayIndex: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { token, dayIndex } = await params
   const index = Number(dayIndex)
@@ -29,6 +32,7 @@ export default async function SharedDayPage({
       tags={bundle.tags}
       counts={vm.counts}
       placeSearchEnabled={isPlaceSearchEnabled()}
+      initialFilters={parseFilters(await searchParams)}
     />
   )
 }
