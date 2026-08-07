@@ -75,7 +75,7 @@ export function FullScreenSheet({
         className,
       )}
     >
-      <header className="pt-safe flex shrink-0 items-center gap-2 border-b px-2 py-2.5">
+      <header className="flex shrink-0 items-center gap-2 border-b px-2 py-2.5">
         <Button
           variant="ghost"
           size="icon"
