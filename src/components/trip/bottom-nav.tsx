@@ -64,6 +64,12 @@ export function BottomNav() {
             <li key={label} className="flex-1">
               <Link
                 href={href}
+                /*
+                  完整預取。這幾個分頁用的是同一份 loadTripBundle，先抓好之後
+                  切過去就是瞬間的；配合 staleTimes.static，抓來的內容 5 分鐘
+                  內都可重用。導覽列只有 3–4 個連結，預取成本有限。
+                */
+                prefetch
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] transition-colors',
