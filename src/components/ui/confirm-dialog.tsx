@@ -107,7 +107,19 @@ export function ConfirmDialog({
             variant={destructive ? 'destructive' : 'default'}
             disabled={pending || disabled}
             onClick={run}
-            className={cn('gap-2', destructive && 'text-white')}
+            className={cn(
+              'gap-2',
+              // 這是對話框的主要動作，用實心紅底而不是 destructive 變體的淡色底
+              destructive && 'bg-destructive hover:bg-destructive/90 text-white',
+              /*
+                送出中不要壓暗。
+
+                Button 的 disabled:opacity-50 是用來表示「這顆現在不能按」，
+                但送出中轉圈本身已經說明狀態了，再變淡只會看起來像壞掉。
+                真正因為條件未滿足而停用（disabled）時才維持變淡。
+              */
+              pending && !disabled && 'disabled:opacity-100',
+            )}
           >
             {pending ? (
               <Loader2 className="size-4 animate-spin" aria-hidden />
