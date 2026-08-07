@@ -25,4 +25,13 @@ export default serwist.withNextConfig(() => ({
     最上層丟出來的，整個 SW 註冊直接失敗，PWA 與離線快取全部不會生效。
   */
   precachePrerendered: true,
+
+  /*
+    _buildManifest.js / _ssgManifest.js 是 Pages Router 的產物。
+    `next build` 仍然會在 .next/static/<buildId>/ 產出它們，但這個 App Router
+    專案部署到 Vercel 之後那兩個檔案並不存在，precache 抓到 404 就會丟出
+    bad-precaching-response，install 失敗、Service Worker 永遠停在 installing。
+    本機 `next start` 讀得到檔案，所以只有線上才會壞 —— 一定要實際部署後驗。
+  */
+  globIgnores: ['.next/static/*/_buildManifest.js', '.next/static/*/_ssgManifest.js'],
 }))
