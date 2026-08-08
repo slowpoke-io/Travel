@@ -90,7 +90,7 @@ export function ExpenseCard({
         </button>
       ) : null}
 
-      <span className="font-numeric shrink-0 text-right tabular-nums">
+      <span className="shrink-0 text-right tabular-nums">
         <span className="block text-sm font-semibold">
           {formatMoney(expense.amount, expense.currency)}
         </span>

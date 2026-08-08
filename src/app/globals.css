@@ -54,9 +54,6 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
 
-  --font-display: var(--theme-font-display), var(--font-sans), sans-serif;
-  --font-numeric: var(--theme-font-numeric), var(--font-sans), sans-serif;
-
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -136,9 +133,6 @@
 /* ── 月台 Platform ── */
 :root,
 [data-theme='platform'] {
-  --theme-font-display: var(--font-plex-sans);
-  --theme-font-numeric: var(--font-plex-mono);
-
   --l-background: oklch(0.980 0.003 250);
   --l-foreground: oklch(0.190 0.010 250);
   --l-card: oklch(1 0 0);
@@ -188,8 +182,6 @@
 
 /* ── 紙圖 Cartography ── */
 [data-theme='cartography'] {
-  --theme-font-display: var(--font-spectral);
-  --theme-font-numeric: var(--font-plex-mono);
   --h-food: 55;
   --h-ticket: 175;
   --h-sight: 195;
@@ -243,8 +235,6 @@
 
 /* ── 潮間帶 Tideline ── */
 [data-theme='tideline'] {
-  --theme-font-display: var(--font-karla);
-  --theme-font-numeric: var(--font-karla);
   --h-food: 35;
   --h-ticket: 195;
 
@@ -297,8 +287,6 @@
 
 /* ── 夜航 Redeye ── */
 [data-theme='redeye'] {
-  --theme-font-display: var(--font-chivo);
-  --theme-font-numeric: var(--font-chivo);
   --h-ticket: 200;
   --h-transport: 285;
 
@@ -440,13 +428,8 @@
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
-  /*
-    主題的拉丁字排在前面、Noto Sans TC 在後面。瀏覽器是逐字挑字體的，
-    所以數字、日期、幣別代碼會用主題那套，中文自動落回 Noto Sans TC ——
-    不必為了換皮多載一份幾百 KB 的中文字檔。
-  */
   html {
-    font-family: var(--font-display);
+    @apply font-sans;
   }
 }
 

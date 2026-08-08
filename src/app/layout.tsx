@@ -1,13 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { cookies } from 'next/headers'
-import {
-  Chivo,
-  IBM_Plex_Mono,
-  IBM_Plex_Sans,
-  Karla,
-  Noto_Sans_TC,
-  Spectral,
-} from 'next/font/google'
+import { Noto_Sans_TC } from 'next/font/google'
 
 import { ServiceWorkerRegistrar } from '@/components/service-worker-registrar'
 import { ThemeColorSync } from '@/components/theme/theme-color-sync'
@@ -24,13 +17,6 @@ import {
 
 import './globals.css'
 
-/*
-  中文一律走 Noto Sans TC。主題只換「拉丁字」那一套 ——
-  金額、日期、幣別代碼這些最顯眼的字本來就是拉丁與數字，換掉它們個性差很多，
-  而中文字檔動輒數百 KB，為了換皮多載一份並不划算。
-
-  next/font 會把每套字自架並加上 unicode-range，沒被用到的主題不會被下載。
-*/
 const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
@@ -38,47 +24,6 @@ const notoSansTC = Noto_Sans_TC({
   display: 'swap',
 })
 
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-plex-sans',
-  display: 'swap',
-})
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
-  display: 'swap',
-})
-
-const spectral = Spectral({
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  variable: '--font-spectral',
-  display: 'swap',
-})
-
-const karla = Karla({
-  subsets: ['latin'],
-  variable: '--font-karla',
-  display: 'swap',
-})
-
-const chivo = Chivo({
-  subsets: ['latin'],
-  variable: '--font-chivo',
-  display: 'swap',
-})
-
-const fontVars = [
-  notoSansTC.variable,
-  plexSans.variable,
-  plexMono.variable,
-  spectral.variable,
-  karla.variable,
-  chivo.variable,
-].join(' ')
 
 export const metadata: Metadata = {
   title: {
@@ -134,7 +79,7 @@ export default async function RootLayout({
       lang="zh-Hant"
       data-theme={isThemeId(theme) ? theme : DEFAULT_THEME}
       data-mode={isThemeMode(mode) ? mode : DEFAULT_MODE}
-      className={`${fontVars} h-full`}
+      className={`${notoSansTC.variable} h-full`}
       /*
         data-resolved-mode 由 THEME_INIT_SCRIPT 在 client 端補上，
         伺服器算不出使用者的系統偏好。這裡明講一聲，免得 React 抱怨對不起來。

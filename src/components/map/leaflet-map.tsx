@@ -11,6 +11,7 @@ import {
   useMap,
 } from 'react-leaflet'
 
+import { resolveCssColor } from '@/lib/css-color'
 import { useTheme } from '@/lib/use-theme'
 import { cn } from '@/lib/utils'
 
@@ -144,7 +145,8 @@ export function LeafletMap({
         <Polyline
           positions={path}
           pathOptions={{
-            color: points[0].color,
+            // SVG 的 stroke 屬性吃不了 CSS 變數，要先解析成實際色值
+            color: resolveCssColor(points[0].color),
             weight: 3,
             opacity: 0.7,
             dashArray: '6 8',
