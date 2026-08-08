@@ -3,30 +3,31 @@
 import { formatApprox, formatMoney } from '@/lib/currency'
 import { expenseCategoryMeta } from '@/lib/expense-constants'
 import { describeTotal, type ExpenseSummary } from '@/lib/expense-summary'
+import type { ExpenseCategory } from '@/lib/supabase/database.types'
 
 /**
  * 花費統計。
  *
- * 圖表刻意手刻 SVG / CSS 而不是引入 recharts 之類的套件：這麼單純的兩張圖
+ * 圖表刻意手刻 SVG / CSS 而不是引入 recharts 之類的套件：這麼單純的圖
  * 不值得多背 100KB 以上的 JS，而這是手機優先的 App，bundle 大小是有感的。
  *
  * 所有圖表一律用結算幣別。混幣時那是唯一加得起來的單位 ——
  * ₩ 和 NT$ 沒辦法畫在同一根長條上。
  *
- * 這裡不再顯示一次總額：花費分頁上方本來就有，重複一次只是佔掉一屏。
+ * 這裡不顯示總額：花費分頁上方本來就有，重複一次只是佔掉一屏。
  */
-export function ExpenseStats({ summary }: { summary: ExpenseSummary }) {
+
+/**
+ * 「全部」看到的東西：整趟的形狀。
+ *
+ * 刻意不列出所有花費 —— 三百筆就是二十幾屏的牆，沒有人會用它找東西，
+ * 要看某一天的明細直接點上面的日期。這一頁回答的是「錢花去哪了」。
+ */
+export function TripOverviewCharts({ summary }: { summary: ExpenseSummary }) {
   if (summary.count === 0) return null
 
   return (
-    <div className="space-y-5">
-      <section>
-        <h3 className="text-muted-foreground mb-2 text-xs font-medium">
-          分類佔比
-        </h3>
-        <CategoryBars summary={summary} />
-      </section>
-
+    <div className="space-y-6">
       {summary.byDay.length > 1 ? (
         <section>
           <h3 className="text-muted-foreground mb-2 text-xs font-medium">
@@ -35,8 +36,21 @@ export function ExpenseStats({ summary }: { summary: ExpenseSummary }) {
           <DailyBars summary={summary} />
         </section>
       ) : null}
+
+      <section>
+        <h3 className="text-muted-foreground mb-2 text-xs font-medium">
+          分類佔比
+        </h3>
+        <CategoryBars summary={summary} />
+      </section>
     </div>
   )
+}
+
+/** 單日看到的東西：這一天的分類組成。下面接的是那天的明細 */
+export function DayCategoryChart({ summary }: { summary: ExpenseSummary }) {
+  if (summary.count === 0) return null
+  return <CategoryDonut summary={summary} />
 }
 
 export function TotalHeader({
@@ -116,9 +130,9 @@ function CategoryBars({ summary }: { summary: ExpenseSummary }) {
 /**
  * 每天花費。
  *
- * 長條依分類堆疊，而不是單一顏色的實心塊 —— 同時看得出「哪天花最多」與
- * 「花在什麼上」，而且跟上面的分類佔比共用同一套顏色，兩張圖才像同一個系統。
- * 原本是近黑色的粗塊，又重又跟旁邊的彩色完全脫節。
+ * 單一顏色。這張圖回答的是「哪一天花比較多」，只有一個變數，
+ * 上色只會讓人以為顏色帶有額外意義。分類的組成留給單日的圓餅圖去講。
+ * 用 --primary 而不是接近黑的前景色 —— 那個又重又跟整體脫節。
  */
 function DailyBars({ summary }: { summary: ExpenseSummary }) {
   const max = Math.max(...summary.byDay.map((d) => d.home), 1)
@@ -148,15 +162,7 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
                 d.dayIndex === null ? '其他' : `Day ${d.dayIndex}`
               }：${formatMoney(d.home, summary.total.homeCurrency)}`}
             >
-              {d.segments.map((seg) => (
-                <div
-                  key={seg.category}
-                  style={{
-                    flexGrow: seg.home,
-                    backgroundColor: expenseCategoryMeta(seg.category).color,
-                  }}
-                />
-              ))}
+              <div className="bg-primary size-full" />
             </div>
 
             <span className="text-muted-foreground border-border w-full border-t pt-1 text-center text-[10px]">
@@ -165,6 +171,99 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * 單日的分類圓餅（甜甜圈）。
+ *
+ * 用 stroke-dasharray 在同一個圓上疊出每一段，而不是自己算弧線的 path ——
+ * 少了一堆三角函數，也不會有浮點誤差造成的縫隙。
+ *
+ * 中間留空放總額：圓餅圖最常被問的就是「所以總共多少」，
+ * 那個洞不放東西才是浪費。
+ */
+function CategoryDonut({ summary }: { summary: ExpenseSummary }) {
+  const R = 42
+  const C = 2 * Math.PI * R
+  const total = summary.total.home
+
+  /*
+    用一般的迴圈累加，不要在 map 的 callback 裡改外面的變數 ——
+    那個 callback 會被 React Compiler 當成活過 render 的閉包而報錯。
+  */
+  const arcs: { category: ExpenseCategory; len: number; offset: number }[] = []
+  let cursor = 0
+  for (const row of summary.byCategory) {
+    const len = total > 0 ? (row.home / total) * C : 0
+    arcs.push({ category: row.category, len, offset: cursor })
+    cursor += len
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative size-28 shrink-0">
+        <svg viewBox="0 0 100 100" className="size-full -rotate-90">
+          {/* 只有一個分類時畫不出「一段」，直接畫整個圓 */}
+          <circle
+            cx="50"
+            cy="50"
+            r={R}
+            fill="none"
+            strokeWidth="14"
+            className="stroke-muted"
+          />
+          {arcs.map((a) => (
+            <circle
+              key={a.category}
+              cx="50"
+              cy="50"
+              r={R}
+              fill="none"
+              strokeWidth="14"
+              stroke={expenseCategoryMeta(a.category).color}
+              strokeDasharray={`${a.len} ${C - a.len}`}
+              strokeDashoffset={-a.offset}
+            />
+          ))}
+        </svg>
+
+        {/*
+        中間放這一天換算後的總額。
+        下面的日期標頭顯示的是原始幣別（₩），兩個互補而不是重複。
+      */}
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-semibold tabular-nums">
+            {formatMoney(total, summary.total.homeCurrency)}
+          </span>
+        </span>
+      </div>
+
+      <ul className="min-w-0 flex-1 space-y-1.5">
+        {summary.byCategory.map((row) => {
+          const meta = expenseCategoryMeta(row.category)
+          return (
+            <li
+              key={row.category}
+              className="flex items-baseline gap-2 text-sm"
+            >
+              <span
+                className="size-2.5 shrink-0 translate-y-0.5 rounded-full"
+                style={{ backgroundColor: meta.color }}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">{meta.label}</span>
+              <span className="tabular-nums">
+                {formatMoney(row.home, summary.total.homeCurrency)}
+              </span>
+              <span className="text-muted-foreground w-9 text-right text-xs tabular-nums">
+                {Math.round(row.ratio * 100)}%
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

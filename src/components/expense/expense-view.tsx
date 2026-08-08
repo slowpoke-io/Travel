@@ -2,14 +2,18 @@
 
 import { useRouter } from 'next/navigation'
 import { useMemo, useState, useTransition } from 'react'
-import { ChartNoAxesColumn, Plus, Wallet } from 'lucide-react'
+import { Plus, Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { deleteExpense } from '@/actions/owner/expenses'
 import { deleteImage } from '@/actions/owner/images'
 import { ExpenseCard } from '@/components/expense/expense-card'
 import { ExpenseFormSheet } from '@/components/expense/expense-form-sheet'
-import { ExpenseStats, TotalHeader } from '@/components/expense/expense-stats'
+import {
+  DayCategoryChart,
+  TotalHeader,
+  TripOverviewCharts,
+} from '@/components/expense/expense-stats'
 import { DayChip } from '@/components/trip/day-chip'
 import { Lightbox } from '@/components/image/lightbox'
 import { useTripAccess } from '@/components/trip/trip-access'
@@ -56,7 +60,6 @@ export function ExpenseView({
     index: number
   } | null>(null)
   const [deletingImage, startDeletingImage] = useTransition()
-  const [showStats, setShowStats] = useState(false)
 
   /*
     看哪一天。'all' 是全部。
@@ -74,13 +77,18 @@ export function ExpenseView({
     [expenses, selectedDay],
   )
 
-  /*
-    統計一律看整趟，不跟著所選的那天走 —— 分類佔比與每天花費本來就是
-    「整趟的形狀」，跟著過濾就沒有意義了。
-  */
-  const summary = useMemo(
+  const isAll = selectedDay === ALL
+
+  /* 「全部」看整趟的形狀 */
+  const tripSummary = useMemo(
     () => buildExpenseSummary(expenses, days, trip.home_currency),
     [expenses, days, trip.home_currency],
+  )
+
+  /* 選了某一天時，圖表換成那一天的分類組成 */
+  const daySummary = useMemo(
+    () => buildExpenseSummary(visible, days, trip.home_currency),
+    [visible, days, trip.home_currency],
   )
 
   /** 每個 chip 上要顯示的筆數 */
@@ -156,36 +164,13 @@ export function ExpenseView({
   return (
     <>
       <div className="border-b px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-xs">
-              總花費
-              {summary.count > 0 ? ` · ${summary.count} 筆` : ''}
-            </p>
-            <div className="mt-1">
-              <TotalHeader described={describeTotal(summary.total)} />
-            </div>
-          </div>
-
-          {summary.count > 0 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStats((v) => !v)}
-              aria-pressed={showStats}
-              className="shrink-0 gap-1.5"
-            >
-              <ChartNoAxesColumn className="size-4" aria-hidden />
-              統計
-            </Button>
-          ) : null}
+        <p className="text-muted-foreground text-xs">
+          總花費
+          {tripSummary.count > 0 ? ` · ${tripSummary.count} 筆` : ''}
+        </p>
+        <div className="mt-1">
+          <TotalHeader described={describeTotal(tripSummary.total)} />
         </div>
-
-        {showStats ? (
-          <div className="mt-5">
-            <ExpenseStats summary={summary} />
-          </div>
-        ) : null}
       </div>
 
       {/* 只有一天以上才需要切換 */}
@@ -223,56 +208,73 @@ export function ExpenseView({
       <main className="pb-24">
         {expenses.length === 0 ? (
           <EmptyExpenses canEdit={canEdit} onAdd={startAdd} />
-        ) : groups.length === 0 ? (
-          <p className="text-muted-foreground py-16 text-center text-sm">
-            這一天還沒有花費
-          </p>
-        ) : (
-          groups.map((group) => (
-            <section key={group.dayId ?? 'none'}>
-              {/*
-                黏在標題列正下方。清單長的時候，捲到一半要知道現在看的是哪一天。
-                不能用 top-0 —— 那會被 sticky 的標題列蓋住。
-              */}
-              <header className="bg-muted/95 supports-backdrop-filter:bg-muted/75 top-app-header sticky z-10 flex items-baseline justify-between px-4 py-1.5 backdrop-blur">
-                <h2 className="text-xs font-medium">
-                  {group.day
-                    ? `Day ${group.day.day_index}${
-                        group.day.date ? ` · ${formatDayLabel(group.day.date)}` : ''
-                      }`
-                    : '其他'}
-                </h2>
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {formatMoney(
-                    describeTotal(group.total).primary.amount,
-                    describeTotal(group.total).primary.currency,
-                  )}
-                </span>
-              </header>
+        ) : isAll ? (
+          /*
+            「全部」只放圖，不列出每一筆。
 
-              <ul className="divide-y">
-                {group.rows.map((expense) => (
-                  <li key={expense.id}>
-                    <ExpenseCard
-                      expense={expense}
-                      homeCurrency={trip.home_currency}
-                      canEdit={canEdit}
-                      removing={removingId === expense.id}
-                      onEdit={() => {
-                        setEditing(expense)
-                        setFormOpen(true)
-                      }}
-                      onDelete={() => setConfirmDelete(expense)}
-                      onOpenImages={() =>
-                        expense.images.length &&
-                        setLightbox({ images: expense.images, index: 0 })
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
+            三百筆攤開是二十幾屏的牆，沒有人會用它找東西 —— 想看明細直接
+            點上面的日期。這一頁回答的是「錢花去哪了」，明細那頁回答的是
+            「那天買了什麼」，兩個不同的問題。
+          */
+          <div className="px-4 py-5">
+            <TripOverviewCharts summary={tripSummary} />
+          </div>
+        ) : (
+          <>
+            <div className="border-b px-4 py-5">
+              <DayCategoryChart summary={daySummary} />
+            </div>
+
+            {groups.length === 0 ? (
+              <p className="text-muted-foreground py-16 text-center text-sm">
+                這一天還沒有花費
+              </p>
+            ) : (
+              groups.map((group) => (
+                <section key={group.dayId ?? 'none'}>
+                  <header className="bg-muted/95 supports-backdrop-filter:bg-muted/75 top-app-header sticky z-10 flex items-baseline justify-between px-4 py-1.5 backdrop-blur">
+                    <h2 className="text-xs font-medium">
+                      {group.day
+                        ? `Day ${group.day.day_index}${
+                            group.day.date
+                              ? ` · ${formatDayLabel(group.day.date)}`
+                              : ''
+                          }`
+                        : '其他'}
+                    </h2>
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {formatMoney(
+                        describeTotal(group.total).primary.amount,
+                        describeTotal(group.total).primary.currency,
+                      )}
+                    </span>
+                  </header>
+
+                  <ul className="divide-y">
+                    {group.rows.map((expense) => (
+                      <li key={expense.id}>
+                        <ExpenseCard
+                          expense={expense}
+                          homeCurrency={trip.home_currency}
+                          canEdit={canEdit}
+                          removing={removingId === expense.id}
+                          onEdit={() => {
+                            setEditing(expense)
+                            setFormOpen(true)
+                          }}
+                          onDelete={() => setConfirmDelete(expense)}
+                          onOpenImages={() =>
+                            expense.images.length &&
+                            setLightbox({ images: expense.images, index: 0 })
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))
+            )}
+          </>
         )}
       </main>
 
