@@ -125,3 +125,21 @@ export function sumMoney(amounts: number[], code: string): number {
   return roundTo(cents / 100, code)
 }
 
+/**
+ * 匯率的反向顯示：1 個結算幣別換得到多少當地幣別。
+ *
+ * 輸入欄位問的是「1 KRW 等於多少 TWD」（0.0234），但那個數字看不出對不對 ——
+ * 沒有人記得 0.0234，大家記得的是「1 塊台幣大概 43 韓元」。
+ *
+ * 這裡刻意不套用幣別的小數位數：它是「比率」不是「金額」。韓元的顯示位數是 0，
+ * 照著套會把 42.735 變成 43 還算堪用，但換成美元（1 TWD ≈ 0.03 USD）就只剩
+ * 0.03，完全看不出你打的匯率精不精確。改用四位有效數字，兩種量級都讀得出來。
+ */
+export function formatInverseRate(rate: number, code: string): string {
+  if (!Number.isFinite(rate) || rate <= 0) return ''
+  const value = Number((1 / rate).toPrecision(4))
+  return (
+    currencyMeta(code).symbol +
+    value.toLocaleString('zh-TW', { maximumFractionDigits: 6 })
+  )
+}

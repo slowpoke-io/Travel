@@ -9,7 +9,12 @@ import { updateTripCurrency } from '@/actions/owner/expenses'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CURRENCY_LIST, currencyMeta, formatMoney } from '@/lib/currency'
+import {
+  CURRENCY_LIST,
+  currencyMeta,
+  formatInverseRate,
+  formatMoney,
+} from '@/lib/currency'
 import type { TripRow } from '@/lib/supabase/database.types'
 
 /**
@@ -105,9 +110,13 @@ export function CurrencySettings({ trip }: { trip: TripRow }) {
             </div>
 
             {rateValid ? (
+              /*
+                反過來寫。上面的欄位問的是「1 KRW 等於多少 TWD」＝ 0.0234，
+                但沒有人記得 0.0234；大家記得的是「1 塊台幣大概 43 韓元」。
+                用這個角度才檢查得出來匯率有沒有打錯。
+              */
               <p className="text-muted-foreground text-xs tabular-nums">
-                {formatMoney(1000, local)} ≈{' '}
-                {formatMoney(Math.round(1000 * rateValue * 100) / 100, home)}
+                {formatMoney(1, home)} ≈ {formatInverseRate(rateValue, local)}
               </p>
             ) : (
               <p className="text-muted-foreground text-xs">
