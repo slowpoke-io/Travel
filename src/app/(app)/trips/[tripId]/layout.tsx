@@ -21,7 +21,11 @@ export default async function TripLayout({
   const { bundle, access } = await getOwnerTripContext(tripId)
 
   return (
-    <TripShell access={access} title={bundle.trip.title}>
+    <TripShell
+      access={access}
+      title={bundle.trip.title}
+      showExpenses={true}
+    >
       {children}
     </TripShell>
   )

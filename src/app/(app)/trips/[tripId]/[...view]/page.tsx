@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: { params: Params }) {
   const suffix = ` · ${bundle.trip.title}`
   if (parsed.tab === 'backlog') return { title: `行程儲備區${suffix}` }
   if (parsed.tab === 'map') return { title: `地圖${suffix}` }
+  if (parsed.tab === 'expense') return { title: `花費${suffix}` }
   return { title: `Day ${parsed.dayIndex}${suffix}` }
 }
 
@@ -47,6 +48,8 @@ export default async function Page({
 
   return (
     <TripTabs
+      trip={bundle.trip}
+      expenses={bundle.expenses}
       days={bundle.days}
       activitiesByDay={Object.fromEntries(vm.byDay)}
       backlogActivities={vm.backlog}

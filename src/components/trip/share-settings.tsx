@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore, useTransition } from 'react'
 import { Check, Copy, Link2, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { setShareShowExpenses } from '@/actions/owner/expenses'
 import { updateShareSettings } from '@/actions/owner/trips'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -21,15 +22,18 @@ export function ShareSettings({
   initialToken,
   initialEnabled,
   initialCanEdit,
+  initialShowExpenses,
 }: {
   tripId: string
   initialToken: string | null
   initialEnabled: boolean
   initialCanEdit: boolean
+  initialShowExpenses: boolean
 }) {
   const [token, setToken] = useState(initialToken)
   const [enabled, setEnabled] = useState(initialEnabled)
   const [canEdit, setCanEdit] = useState(initialCanEdit)
+  const [showExpenses, setShowExpenses] = useState(initialShowExpenses)
   const [pending, startTransition] = useTransition()
   const [copied, setCopied] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
@@ -139,6 +143,39 @@ export function ShareSettings({
                   { enabled: true, canEdit: v },
                   v ? '已開放編輯' : '已改為唯讀',
                 )
+              }}
+            />
+          </div>
+
+          {/*
+            花費另外一個開關，而且預設關著。錢比行程敏感，連結又可能被轉傳，
+            所以就算開了「可編輯」，花費仍然要單獨同意才看得到 —— 而且永遠
+            只是看得到，訪客改不了（沒有對應的 share action）。
+          */}
+          <div className="flex items-start justify-between gap-4 rounded-xl border p-4">
+            <div className="min-w-0">
+              <Label htmlFor="share-expenses" className="text-sm font-medium">
+                顯示花費
+              </Label>
+              <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                訪客看得到金額與統計，但改不了。
+              </p>
+            </div>
+            <Switch
+              id="share-expenses"
+              checked={showExpenses}
+              disabled={pending}
+              onCheckedChange={(v) => {
+                setShowExpenses(v)
+                startTransition(async () => {
+                  const result = await setShareShowExpenses(tripId, v)
+                  if (!result.ok) {
+                    setShowExpenses(!v)
+                    toast.error('設定失敗', { description: result.error })
+                    return
+                  }
+                  toast.success(v ? '訪客看得到花費了' : '已對訪客隱藏花費')
+                })
               }}
             />
           </div>

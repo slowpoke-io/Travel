@@ -8,7 +8,24 @@
 export type ActivityCategory =
   'sight' | 'food' | 'lodging' | 'transport' | 'shopping' | 'other'
 
-export type ImageRole = 'cover' | 'info' | 'record'
+/**
+ * receipt 的語意是「屬於某筆花費的圖片」，不一定是收據 ——
+ * 名字是歷史因素，介面上一律稱為「圖片」。詳見 0008_expense_enums.sql。
+ */
+export type ImageRole = 'cover' | 'info' | 'record' | 'receipt'
+
+/**
+ * 花費分類。刻意不沿用 ActivityCategory —— 那是「地點的種類」，
+ * 這是「付款的種類」。機票、簽證、網卡都不是地點。
+ */
+export type ExpenseCategory =
+  | 'food'
+  | 'lodging'
+  | 'transport'
+  | 'ticket'
+  | 'shopping'
+  | 'telecom'
+  | 'other'
 
 export type ActivityLink = {
   label: string
@@ -51,6 +68,34 @@ export type TripRow = Timestamps & {
   share_token: string | null
   share_enabled: boolean
   share_can_edit: boolean
+  /** 結算幣別：所有統計換算到它 */
+  home_currency: string
+  /** 這趟主要花費的幣別（去韓國就是 KRW）。null = 只花結算幣別 */
+  local_currency: string | null
+  /** 1 個 local_currency 等於幾個 home_currency */
+  fx_rate: number | null
+  /** 分享連結看不看得到花費。預設關閉 */
+  share_show_expenses: boolean
+}
+
+export type ExpenseRow = Timestamps & {
+  id: string
+  trip_id: string
+  /** null = 未指定日期 */
+  day_id: string | null
+  /** null = 沒有對應到特定地點 */
+  activity_id: string | null
+  title: string | null
+  category: ExpenseCategory
+  amount: number
+  currency: string
+  /** 建立當下的匯率快照。改整趟的匯率不會追溯改到舊帳 */
+  rate: number
+  /** 資料庫算出來的換算值（generated column），不可寫入 */
+  amount_home: number
+  spent_at: string | null
+  note: string | null
+  created_by: string | null
 }
 
 export type TripDayRow = {
@@ -100,6 +145,8 @@ export type ImageRow = {
   trip_id: string
   /** null = 屬於整趟旅遊而非單一行程 */
   activity_id: string | null
+  /** null = 不屬於任何一筆花費 */
+  expense_id: string | null
   role: ImageRole
   path: string
   thumb_path: string | null
@@ -131,7 +178,27 @@ export type Database = {
       >
       trips: TableDef<
         TripRow,
-        Omit<TripRow, 'id' | 'created_at' | 'updated_at'> & { id?: string },
+        // 幣別與分享相關欄位資料庫都有預設值，建立時不必逐一傳
+        Omit<
+          TripRow,
+          | 'id'
+          | 'created_at'
+          | 'updated_at'
+          | 'home_currency'
+          | 'local_currency'
+          | 'fx_rate'
+          | 'share_show_expenses'
+        > &
+          Partial<
+            Pick<
+              TripRow,
+              | 'id'
+              | 'home_currency'
+              | 'local_currency'
+              | 'fx_rate'
+              | 'share_show_expenses'
+            >
+          >,
         Partial<Omit<TripRow, 'id' | 'owner_id'>>
       >
       trip_days: TableDef<
@@ -157,9 +224,20 @@ export type Database = {
         Partial<Omit<TagRow, 'id' | 'trip_id'>>
       >
       activity_tags: TableDef<ActivityTagRow, ActivityTagRow, never>
+      expenses: TableDef<
+        ExpenseRow,
+        // amount_home 是 generated column，寫不得
+        Omit<ExpenseRow, 'id' | 'created_at' | 'updated_at' | 'amount_home'> & {
+          id?: string
+        },
+        Partial<Omit<ExpenseRow, 'id' | 'trip_id' | 'amount_home'>>
+      >
       images: TableDef<
         ImageRow,
-        Omit<ImageRow, 'id' | 'created_at'> & { id?: string },
+        Omit<ImageRow, 'id' | 'created_at' | 'expense_id'> & {
+          id?: string
+          expense_id?: string | null
+        },
         Partial<Omit<ImageRow, 'id' | 'trip_id'>>
       >
     }

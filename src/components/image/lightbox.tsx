@@ -30,6 +30,7 @@ export function Lightbox({
   onClose,
   onMakeCover,
   onDelete,
+  allowCover = true,
 }: {
   images: ImageRow[]
   startIndex: number
@@ -38,6 +39,8 @@ export function Lightbox({
   onClose: () => void
   onMakeCover: (image: ImageRow) => void
   onDelete: (image: ImageRow) => void
+  /** 沒有封面概念的情境，關掉「設為封面」只留刪除 */
+  allowCover?: boolean
 }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [index, setIndex] = useState(startIndex)
@@ -176,7 +179,7 @@ export function Lightbox({
 
         {canEdit && current ? (
           <div className="mt-3 flex gap-2">
-            {current.role !== 'cover' ? (
+            {!allowCover ? null : current.role !== 'cover' ? (
               <Button
                 variant="secondary"
                 disabled={pending}

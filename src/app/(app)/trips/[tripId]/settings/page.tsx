@@ -1,4 +1,5 @@
 import { updateTrip } from '@/actions/owner/trips'
+import { CurrencySettings } from '@/components/trip/currency-settings'
 import { DayManager } from '@/components/trip/day-manager'
 import { DeleteTripButton } from '@/components/trip/delete-trip-button'
 import { ShareSettings } from '@/components/trip/share-settings'
@@ -60,6 +61,15 @@ export default async function TripSettingsPage({
 
       <section className="space-y-3">
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          幣別與匯率
+        </h2>
+        <CurrencySettings trip={trip} />
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           標籤
         </h2>
         <TagManager tripId={tripId} tags={tags} />
@@ -76,6 +86,7 @@ export default async function TripSettingsPage({
           initialToken={trip.share_token}
           initialEnabled={trip.share_enabled}
           initialCanEdit={trip.share_can_edit}
+          initialShowExpenses={trip.share_show_expenses}
         />
       </section>
 

@@ -76,6 +76,70 @@ export const tagInputSchema = z.object({
   color: trimmed(16).default('slate'),
 })
 
+export const expenseCategories = [
+  'food',
+  'lodging',
+  'transport',
+  'ticket',
+  'shopping',
+  'telecom',
+  'other',
+] as const
+
+export const expenseInputSchema = z.object({
+  title: trimmed(200).nullable().optional(),
+  category: z.enum(expenseCategories).default('other'),
+  /*
+    金額用 number 而不是字串。上限訂 10^12 —— 這是 numeric(14,2) 放得下的
+    量級，同時擋掉手滑多打幾個 0 之後才在資料庫層爆掉。
+  */
+  amount: z
+    .number()
+    .nonnegative('金額不能是負數')
+    .max(1_000_000_000_000, '金額太大了'),
+  currency: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{3}$/, '幣別要是三個字母的代碼，例如 KRW'),
+  /** 建立當下的匯率快照 */
+  rate: z.number().positive('匯率要大於 0').max(1_000_000),
+  spent_at: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  day_id: z.string().uuid().nullable().optional(),
+  activity_id: z.string().uuid().nullable().optional(),
+  note: trimmed(2000).nullable().optional(),
+})
+
+export type ExpenseInput = z.infer<typeof expenseInputSchema>
+
+/** 旅遊的幣別設定 */
+export const tripCurrencySchema = z
+  .object({
+    home_currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{3}$/, '幣別代碼有誤'),
+    local_currency: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{3}$/, '幣別代碼有誤')
+      .nullable()
+      .optional(),
+    fx_rate: z.number().positive('匯率要大於 0').max(1_000_000).nullable().optional(),
+  })
+  .refine((v) => !v.local_currency || v.local_currency === v.home_currency || v.fx_rate, {
+    message: '設了當地幣別就要填匯率',
+    path: ['fx_rate'],
+  })
+
+export type TripCurrencyInput = z.infer<typeof tripCurrencySchema>
+
 export const reorderSchema = z.object({
   dayId: z.string().uuid().nullable(),
   ids: z.array(z.string().uuid()).max(300),

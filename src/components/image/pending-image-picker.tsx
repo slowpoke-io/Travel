@@ -40,12 +40,15 @@ export function PendingImagePicker({
   onRemove,
   onReorder,
   hasExistingCover,
+  showCoverBadge = true,
 }: {
   items: PendingUpload[]
   onAdd: (files: File[]) => void
   onRemove: (id: string) => void
   onReorder: (next: PendingUpload[]) => void
   hasExistingCover: boolean
+  /** 沒有封面概念的情境（例如花費的圖片），關掉第一張的「封面」標記 */
+  showCoverBadge?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -100,7 +103,7 @@ export function PendingImagePicker({
                 <SortableThumb
                   key={item.id}
                   item={item}
-                  isCover={index === 0 && !hasExistingCover}
+                  isCover={showCoverBadge && index === 0 && !hasExistingCover}
                   dragging={activeId === item.id}
                   onRemove={() => onRemove(item.id)}
                 />

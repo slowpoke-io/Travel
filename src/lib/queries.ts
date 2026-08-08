@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   ActivityRow,
   Database,
+  ExpenseRow,
   ImageRow,
   TagRow,
   TripDayRow,
@@ -19,12 +20,20 @@ export type ActivityWithRelations = ActivityRow & {
   images: ImageRow[]
 }
 
+/** 花費 + 它的收據照片 */
+export type ExpenseWithImages = ExpenseRow & { images: ImageRow[] }
+
 export type TripBundle = {
   trip: TripRow
   days: TripDayRow[]
   activities: ActivityWithRelations[]
   tags: TagRow[]
   tripImages: ImageRow[]
+  /**
+   * 花費。分享連結且擁有者沒開放時是空陣列 —— 不是「查了但過濾掉」，
+   * 而是根本不查（見 includeExpenses）。
+   */
+  expenses: ExpenseWithImages[]
 }
 
 /**
@@ -39,8 +48,17 @@ export type TripBundle = {
 export async function loadTripBundle(
   supabase: Client,
   tripId: string,
+  options: {
+    /**
+     * 要不要一起讀花費。分享連結的訪客預設讀不到 ——
+     * 這裡是「不發出查詢」而不是「查了再過濾」，少一次往返也少一個出錯的機會。
+     */
+    includeExpenses?: boolean
+  } = {},
 ): Promise<TripBundle | null> {
-  const [tripRes, daysRes, activitiesRes, tagsRes, imagesRes, actTagsRes] =
+  const { includeExpenses = true } = options
+
+  const [tripRes, daysRes, activitiesRes, tagsRes, imagesRes, actTagsRes, expensesRes] =
     await Promise.all([
       supabase.from('trips').select('*').eq('id', tripId).maybeSingle(),
       supabase
@@ -63,6 +81,14 @@ export async function loadTripBundle(
         .from('activity_tags')
         .select('activity_id, tag_id, activities!inner(trip_id)')
         .eq('activities.trip_id', tripId),
+      includeExpenses
+        ? supabase
+            .from('expenses')
+            .select('*')
+            .eq('trip_id', tripId)
+            .order('spent_at', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false })
+        : null,
     ])
 
   if (tripRes.error) throw tripRes.error
@@ -71,6 +97,7 @@ export async function loadTripBundle(
   for (const res of [daysRes, activitiesRes, tagsRes, imagesRes, actTagsRes]) {
     if (res.error) throw res.error
   }
+  if (expensesRes?.error) throw expensesRes.error
 
   const tagsByActivity = new Map<string, string[]>()
   for (const row of (actTagsRes.data ?? []) as {
@@ -82,9 +109,21 @@ export async function loadTripBundle(
     else tagsByActivity.set(row.activity_id, [row.tag_id])
   }
 
+  /*
+    圖片分三類。判斷順序很重要：收據的 activity_id 也是 null，如果只用
+    `!img.activity_id` 判斷「屬於整趟旅遊」，收據就會被算成旅遊層級的圖，
+    跑到概覽的相簿裡。所以先看 expense_id。
+  */
   const imagesByActivity = new Map<string, ImageRow[]>()
+  const imagesByExpense = new Map<string, ImageRow[]>()
   const tripImages: ImageRow[] = []
   for (const img of imagesRes.data ?? []) {
+    if (img.expense_id) {
+      const list = imagesByExpense.get(img.expense_id)
+      if (list) list.push(img)
+      else imagesByExpense.set(img.expense_id, [img])
+      continue
+    }
     if (!img.activity_id) {
       tripImages.push(img)
       continue
@@ -102,12 +141,18 @@ export async function loadTripBundle(
     }),
   )
 
+  const expenses: ExpenseWithImages[] = (expensesRes?.data ?? []).map((e) => ({
+    ...e,
+    images: imagesByExpense.get(e.id) ?? [],
+  }))
+
   return {
     trip: tripRes.data,
     days: daysRes.data ?? [],
     activities,
     tags: tagsRes.data ?? [],
     tripImages,
+    expenses,
   }
 }
 

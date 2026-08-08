@@ -207,17 +207,21 @@ export function usePendingUploads(tripId: string | null) {
 
   /**
    * 送出表單時要寫入 images 的資料。
-   * 封面只能有一張，所以第一張才是 cover（已有封面時全部歸 info）。
+   *
+   * 預設行為：封面只能有一張，所以第一張才是 cover（已有封面時全部歸 info）。
+   * 傳入 fixedRole 則全部用同一個 role —— 花費的圖片沒有封面的概念。
    */
   const toCommitInputs = useCallback(
-    (hasExistingCover: boolean): CommitImageInput[] =>
+    (hasExistingCover: boolean, fixedRole?: ImageRole): CommitImageInput[] =>
       items
         .filter((i) => i.committed)
         .map((i, index) => ({
           ...i.committed!,
-          role: (index === 0 && !hasExistingCover
-            ? 'cover'
-            : 'info') as ImageRole,
+          role:
+            fixedRole ??
+            ((index === 0 && !hasExistingCover
+              ? 'cover'
+              : 'info') as ImageRole),
         })),
     [items],
   )

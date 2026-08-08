@@ -76,12 +76,17 @@ export async function commitImages(
   params: {
     tripId: string
     activityId: string | null
+    /** 屬於某筆花費的圖片。跟 activityId 互斥 */
+    expenseId?: string | null
     images: CommitImageInput[]
     createdBy: string | null
   },
 ): Promise<void> {
-  const { tripId, activityId, images, createdBy } = params
+  const { tripId, activityId, expenseId = null, images, createdBy } = params
   if (!images.length) return
+
+  // 資料庫也有 check 擋著，這裡先擋是為了給得出看得懂的錯誤
+  if (activityId && expenseId) throw new Error('IMAGE_OWNER_AMBIGUOUS')
 
   for (const img of images) {
     if (!img.path.startsWith(`${tripId}/`)) {
@@ -103,6 +108,17 @@ export async function commitImages(
     if (!data) throw new Error('ACTIVITY_NOT_IN_TRIP')
   }
 
+  if (expenseId) {
+    const { data, error } = await client
+      .from('expenses')
+      .select('id')
+      .eq('id', expenseId)
+      .eq('trip_id', tripId)
+      .maybeSingle()
+    if (error) throw error
+    if (!data) throw new Error('EXPENSE_NOT_IN_TRIP')
+  }
+
   // 接在既有相簿後面
   const existing = client
     .from('images')
@@ -111,10 +127,11 @@ export async function commitImages(
     .order('position', { ascending: false })
     .limit(1)
 
-  const { data: last } = await (
-    activityId
+  const { data: last } = await (expenseId
+    ? existing.eq('expense_id', expenseId)
+    : activityId
       ? existing.eq('activity_id', activityId)
-      : existing.is('activity_id', null)
+      : existing.is('activity_id', null).is('expense_id', null)
   ).maybeSingle()
 
   let position = last ? last.position + 1 : 0
@@ -122,6 +139,7 @@ export async function commitImages(
   const rows = images.map((img) => ({
     trip_id: tripId,
     activity_id: activityId,
+    expense_id: expenseId,
     role: img.role,
     path: img.path,
     thumb_path: img.thumbPath,

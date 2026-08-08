@@ -13,7 +13,11 @@ export default async function SharedTripLayout({
   const { bundle, access } = await getShareTripContext(token)
 
   return (
-    <TripShell access={access} title={bundle.trip.title}>
+    <TripShell
+      access={access}
+      title={bundle.trip.title}
+      showExpenses={bundle.trip.share_show_expenses}
+    >
       {children}
     </TripShell>
   )

@@ -28,6 +28,8 @@ export default async function Page({
 
   return (
     <TripTabs
+      trip={bundle.trip}
+      expenses={bundle.expenses}
       days={bundle.days}
       activitiesByDay={Object.fromEntries(vm.byDay)}
       backlogActivities={vm.backlog}

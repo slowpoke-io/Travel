@@ -2,7 +2,11 @@
 
 import { usePathname } from 'next/navigation'
 
-import { DayPageSkeleton, MapPageSkeleton } from '@/components/trip/skeletons'
+import {
+  DayPageSkeleton,
+  ExpensePageSkeleton,
+  MapPageSkeleton,
+} from '@/components/trip/skeletons'
 import { tripViewFromPathname } from '@/lib/trip-nav'
 
 /**
@@ -13,5 +17,7 @@ import { tripViewFromPathname } from '@/lib/trip-nav'
  */
 export default function Loading() {
   const view = tripViewFromPathname(usePathname())
-  return view.tab === 'map' ? <MapPageSkeleton /> : <DayPageSkeleton />
+  if (view.tab === 'map') return <MapPageSkeleton />
+  if (view.tab === 'expense') return <ExpensePageSkeleton />
+  return <DayPageSkeleton />
 }

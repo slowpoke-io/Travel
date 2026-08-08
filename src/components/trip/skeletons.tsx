@@ -138,3 +138,27 @@ export function ActivityDetailSkeleton() {
     </div>
   )
 }
+
+/** 花費分頁：總額 + 幾列清單 */
+export function ExpensePageSkeleton() {
+  return (
+    <div className="animate-in fade-in duration-200">
+      <div className="space-y-2 border-b px-4 py-4">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-9 w-40" />
+      </div>
+      <div className="divide-y">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3">
+            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+            <Skeleton className="h-5 w-20 shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

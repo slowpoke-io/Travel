@@ -24,7 +24,13 @@ const loadShareBundle = cache(async (token: string) => {
   if (!share) return null
 
   // token 已驗證通過，才用 admin client 讀取（匿名訪客沒有 session，無法靠 RLS）
-  const bundle = await loadTripBundle(createAdminClient(), share.trip.id)
+  const bundle = await loadTripBundle(createAdminClient(), share.trip.id, {
+    /*
+      花費預設不給訪客看。這裡走的是 admin client，RLS 擋不住，所以
+      「不要查」就是唯一的防線 —— 由擁有者逐趟開啟 share_show_expenses。
+    */
+    includeExpenses: share.trip.share_show_expenses === true,
+  })
   return bundle ? { bundle, canEdit: share.canEdit } : null
 })
 

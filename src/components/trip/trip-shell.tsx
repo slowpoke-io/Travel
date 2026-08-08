@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Eye, PenLine } from 'lucide-react'
+import { ArrowLeft, Eye, PenLine, Settings2 } from 'lucide-react'
 
 import { BottomNav } from '@/components/trip/bottom-nav'
 import {
@@ -18,10 +18,13 @@ import { Badge } from '@/components/ui/badge'
 export function TripShell({
   access,
   title,
+  showExpenses,
   children,
 }: {
   access: TripAccess
   title: string
+  /** 這趟旅遊要不要顯示花費分頁（訪客由擁有者逐趟決定） */
+  showExpenses: boolean
   children: React.ReactNode
 }) {
   const isGuest = access.mode === 'guest'
@@ -64,13 +67,26 @@ export function TripShell({
                   </>
                 )}
               </Badge>
-            ) : null}
+            ) : (
+              /*
+                設定從底部導覽搬到這裡 —— 底部四格留給每天都會用到的分頁。
+                設定是偶爾才進去一次的東西，不值得佔一格。
+              */
+              <Link
+                href={`/trips/${access.tripId}/settings`}
+                prefetch
+                aria-label="旅遊設定"
+                className="hover:bg-muted flex size-9 shrink-0 items-center justify-center rounded-full"
+              >
+                <Settings2 className="size-5" aria-hidden />
+              </Link>
+            )}
           </div>
         </header>
 
         {children}
 
-        <BottomNav />
+        <BottomNav showExpenses={showExpenses} />
       </div>
     </TripAccessProvider>
   )

@@ -10,7 +10,7 @@
  * usePathname，所以「目前在哪個分頁」直接從網址讀就好，不需要另外存狀態，
  * 上一頁／下一頁與分享網址也都照常運作。
  */
-export type TripTab = 'day' | 'backlog' | 'map'
+export type TripTab = 'day' | 'backlog' | 'map' | 'expense'
 
 /*
   這個檔案刻意「不」標 'use client'：路由的 page 是 server component，
@@ -22,6 +22,7 @@ export type TripView =
   | { tab: 'day'; dayIndex: number }
   | { tab: 'backlog' }
   | { tab: 'map' }
+  | { tab: 'expense' }
 
 /**
  * 從路由的 catch-all 片段解析出要顯示哪個分頁。
@@ -30,6 +31,7 @@ export type TripView =
 export function parseTripView(segments: string[]): TripView | null {
   if (segments.length === 1 && segments[0] === 'backlog') return { tab: 'backlog' }
   if (segments.length === 1 && segments[0] === 'map') return { tab: 'map' }
+  if (segments.length === 1 && segments[0] === 'expenses') return { tab: 'expense' }
   if (segments.length === 2 && segments[0] === 'd') {
     const index = Number(segments[1])
     if (Number.isInteger(index) && index >= 1) return { tab: 'day', dayIndex: index }
@@ -39,9 +41,9 @@ export function parseTripView(segments: string[]): TripView | null {
 
 /** 從完整網址解析（client 端用；pushState 之後 usePathname 會跟著變） */
 export function tripViewFromPathname(pathname: string): TripView {
-  const backlog = /\/backlog\/?$/.test(pathname)
-  if (backlog) return { tab: 'backlog' }
+  if (/\/backlog\/?$/.test(pathname)) return { tab: 'backlog' }
   if (/\/map\/?$/.test(pathname)) return { tab: 'map' }
+  if (/\/expenses\/?$/.test(pathname)) return { tab: 'expense' }
   const m = pathname.match(/\/d\/(\d+)\/?$/)
   if (m) return { tab: 'day', dayIndex: Number(m[1]) }
   return { tab: 'day', dayIndex: 1 }
@@ -49,6 +51,8 @@ export function tripViewFromPathname(pathname: string): TripView {
 
 export function tripViewHref(base: string, view: TripView): string {
   if (view.tab === 'day') return `${base}/d/${view.dayIndex}`
+  // 網址用複數的 /expenses，讀起來比 /expense 自然
+  if (view.tab === 'expense') return `${base}/expenses`
   return `${base}/${view.tab}`
 }
 

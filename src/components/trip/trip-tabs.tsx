@@ -2,12 +2,13 @@
 
 import { usePathname } from 'next/navigation'
 
+import { ExpenseView } from '@/components/expense/expense-view'
 import { BacklogView } from '@/components/trip/backlog-view'
 import { DayView } from '@/components/trip/day-view'
 import { TripMapView } from '@/components/trip/trip-map-view'
 import type { ActivityFilters } from '@/lib/activity-filters'
-import type { ActivityWithRelations } from '@/lib/queries'
-import type { TagRow, TripDayRow } from '@/lib/supabase/database.types'
+import type { ActivityWithRelations, ExpenseWithImages } from '@/lib/queries'
+import type { TagRow, TripDayRow, TripRow } from '@/lib/supabase/database.types'
 import { tripViewFromPathname } from '@/lib/trip-nav'
 
 /**
@@ -20,6 +21,8 @@ import { tripViewFromPathname } from '@/lib/trip-nav'
  * 網址，Next 會同步到 usePathname，上一頁／下一頁也因此自動正確。
  */
 export function TripTabs({
+  trip,
+  expenses,
   days,
   activitiesByDay,
   backlogActivities,
@@ -28,6 +31,8 @@ export function TripTabs({
   placeSearchEnabled,
   initialFilters,
 }: {
+  trip: TripRow
+  expenses: ExpenseWithImages[]
   days: TripDayRow[]
   activitiesByDay: Record<string, ActivityWithRelations[]>
   backlogActivities: ActivityWithRelations[]
@@ -53,6 +58,10 @@ export function TripTabs({
 
   if (view.tab === 'map') {
     return <TripMapView days={days} byDay={activitiesByDay} />
+  }
+
+  if (view.tab === 'expense') {
+    return <ExpenseView trip={trip} days={days} expenses={expenses} />
   }
 
   return (

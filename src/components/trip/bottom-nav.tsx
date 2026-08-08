@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { CalendarDays, Inbox, Map, Settings2 } from 'lucide-react'
+import { CalendarDays, Inbox, Map, Wallet } from 'lucide-react'
 
-import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
+import { useBasePath } from '@/components/trip/trip-access'
 import {
   pushTripView,
   tripViewFromPathname,
@@ -19,10 +19,9 @@ import { cn } from '@/lib/utils'
  * 旅遊內的底部導覽。手機優先，所有按鈕高度 ≥ 56px，
  * 並保留 iPhone home indicator 的安全區。
  */
-export function BottomNav() {
+export function BottomNav({ showExpenses }: { showExpenses: boolean }) {
   const pathname = usePathname()
   const base = useBasePath()
-  const access = useTripAccess()
 
   const current = tripViewFromPathname(pathname)
 
@@ -59,16 +58,26 @@ export function BottomNav() {
       },
       { tab: 'backlog', view: { tab: 'backlog' }, label: '儲備區', icon: Inbox },
       { tab: 'map', view: { tab: 'map' }, label: '地圖', icon: Map },
+      // 訪客看不看得到花費由擁有者逐趟決定；看不到時連分頁都不顯示
+      ...(showExpenses
+        ? [
+            {
+              tab: 'expense' as const,
+              view: { tab: 'expense' as const },
+              label: '花費',
+              icon: Wallet,
+            },
+          ]
+        : []),
     ]
 
-  const settingsHref = `${base}/settings`
   const onSettings = pathname.endsWith('/settings')
 
   return (
     <nav className="bg-background/95 pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md border-t backdrop-blur">
       <ul className="flex">
         {tabs.map(({ tab, view, label, icon: Icon }) => {
-          // 在設定頁或行程詳情頁時，三個分頁都不該亮
+          // 在設定頁或行程詳情頁時，所有分頁都不該亮
           const active = !onSettings && inTabRoute && current.tab === tab
           return (
             <li key={tab} className="flex-1">
@@ -95,24 +104,6 @@ export function BottomNav() {
             </li>
           )
         })}
-
-        {/* 訪客沒有設定頁 —— 旅遊本體只有擁有者能改 */}
-        {access.mode === 'owner' ? (
-          <li className="flex-1">
-            <Link
-              href={settingsHref}
-              prefetch
-              aria-current={onSettings ? 'page' : undefined}
-              className={navItemClass(onSettings)}
-            >
-              <Settings2
-                className={cn('size-5', onSettings && 'stroke-[2.5]')}
-                aria-hidden
-              />
-              設定
-            </Link>
-          </li>
-        ) : null}
       </ul>
     </nav>
   )
@@ -120,7 +111,7 @@ export function BottomNav() {
 
 /** 是不是三個分頁其中之一（不是設定頁、也不是行程詳情頁） */
 function isTabRoute(pathname: string) {
-  return /\/(backlog|map)\/?$|\/d\/\d+\/?$/.test(pathname)
+  return /\/(backlog|map|expenses)\/?$|\/d\/\d+\/?$/.test(pathname)
 }
 
 function navItemClass(active: boolean) {
