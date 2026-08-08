@@ -282,7 +282,7 @@ function Body({
             onChange={(e) => setDayId(e.target.value || null)}
             className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm"
           >
-            <option value="">未指定</option>
+            <option value="">其他</option>
             {days.map((d) => (
               <option key={d.id} value={d.id}>
                 Day {d.day_index}

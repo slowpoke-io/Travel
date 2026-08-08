@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { LogOut } from 'lucide-react'
 
+import { ThemeMenu } from '@/components/theme/theme-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -49,7 +50,7 @@ export function AccountMenu({
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="font-normal">
             <p className="truncate text-sm font-medium">
               {displayName ?? '未命名使用者'}
@@ -58,6 +59,8 @@ export function AccountMenu({
               <p className="text-muted-foreground truncate text-xs">{email}</p>
             ) : null}
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <ThemeMenu />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => signOutForm.current?.requestSubmit()}

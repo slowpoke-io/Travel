@@ -57,7 +57,7 @@ export function ExpenseView({
     [expenses, days, trip.home_currency],
   )
 
-  /* 依天分組。未指定日期的排在最後 */
+  /* 依天分組。沒有指定天數的歸「其他」，排在最後 */
   const groups = useMemo(() => {
     const byDay = new Map<string | null, ExpenseWithImages[]>()
     for (const e of expenses) {
@@ -164,7 +164,7 @@ export function ExpenseView({
                     ? `Day ${group.day.day_index}${
                         group.day.date ? ` · ${formatDayLabel(group.day.date)}` : ''
                       }`
-                    : '未指定日期'}
+                    : '其他'}
                 </h2>
                 <span className="text-muted-foreground text-xs tabular-nums">
                   {formatMoney(

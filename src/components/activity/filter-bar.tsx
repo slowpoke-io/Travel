@@ -2,7 +2,7 @@
 
 import { X } from 'lucide-react'
 
-import { CATEGORIES, tagColorClass } from '@/lib/constants'
+import { CATEGORIES, categoryChipStyle, tagColorClass } from '@/lib/constants'
 import type { ActivityWithRelations } from '@/lib/queries'
 import type { ActivityCategory, TagRow } from '@/lib/supabase/database.types'
 import type { ActivityFilters } from '@/lib/activity-filters'
@@ -85,9 +85,9 @@ export function FilterBar({
                   aria-pressed={on}
                   className={cn(
                     'inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium transition-all',
-                    cat.chip,
                     on ? 'ring-foreground/40 ring-2' : 'opacity-55',
                   )}
+                  style={categoryChipStyle(cat.color)}
                 >
                   <Icon className="size-3" aria-hidden />
                   {cat.label}

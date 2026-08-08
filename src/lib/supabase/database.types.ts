@@ -81,7 +81,7 @@ export type TripRow = Timestamps & {
 export type ExpenseRow = Timestamps & {
   id: string
   trip_id: string
-  /** null = 未指定日期 */
+  /** null = 沒有指定天數，畫面上歸在「其他」 */
   day_id: string | null
   /** null = 沒有對應到特定地點 */
   activity_id: string | null

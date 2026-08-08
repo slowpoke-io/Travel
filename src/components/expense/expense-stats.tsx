@@ -46,11 +46,11 @@ export function TotalHeader({
 }) {
   return (
     <div>
-      <p className="text-3xl font-semibold tracking-tight tabular-nums">
+      <p className="font-numeric text-3xl font-semibold tracking-tight tabular-nums">
         {formatMoney(described.primary.amount, described.primary.currency)}
       </p>
       {described.secondary.length ? (
-        <p className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-sm tabular-nums">
+        <p className="text-muted-foreground font-numeric mt-0.5 flex flex-wrap gap-x-3 text-sm tabular-nums">
           {described.secondary.map((s) => (
             <span key={s.currency}>
               {s.approx
@@ -131,7 +131,7 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
             }}
           />
           <span className="text-muted-foreground text-[10px]">
-            {d.dayIndex === null ? '未指定' : `D${d.dayIndex}`}
+            {d.dayIndex === null ? '其他' : `D${d.dayIndex}`}
           </span>
         </div>
       ))}

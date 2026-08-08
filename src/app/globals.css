@@ -2,7 +2,21 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
+/*
+  Tailwind 的 dark: 變體。原本綁在 .dark class 上，但那個 class 從來沒有被加上去
+  —— 全專案的 dark: 樣式其實從未生效過。改成對應新的模式系統：
+  明確選深色，或（沒有明確選淺色時）跟隨系統。
+*/
+@custom-variant dark {
+  &:where([data-mode='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-mode='light']) *) {
+      @slot;
+    }
+  }
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -10,19 +24,6 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -35,10 +36,27 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+  --color-card-foreground: var(--foreground);
+  --color-popover-foreground: var(--foreground);
   --color-card: var(--card);
+  /* 分類色：搬進 token 之後，地圖標記與圖表才換得到主題 */
+  --color-cat-sight: var(--cat-sight);
+  --color-cat-food: var(--cat-food);
+  --color-cat-lodging: var(--cat-lodging);
+  --color-cat-transport: var(--cat-transport);
+  --color-cat-shopping: var(--cat-shopping);
+  --color-cat-ticket: var(--cat-ticket);
+  --color-cat-telecom: var(--cat-telecom);
+  --color-cat-other: var(--cat-other);
+
+  --color-surface-raised: var(--surface-raised);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --font-display: var(--theme-font-display), var(--font-sans), sans-serif;
+  --font-numeric: var(--theme-font-numeric), var(--font-sans), sans-serif;
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,75 +66,370 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* =============================================================================
+   Design tokens
+   =============================================================================
+
+   兩層：
+
+   原始層   每個主題自己的色相與明度政策（--ink-h、--cat-l 那些）
+   語意層   --background、--primary、--cat-food 這些。元件只准用這一層
+
+   分類色刻意用「固定色相 + 每個主題的明度/彩度政策」推導，而不是每個主題
+   各寫 13 個色碼。四套主題 × 兩種模式 × 13 個分類 = 104 個值，逐一手寫
+   既維護不動、彼此也難保持一致。
+
+   模式的判斷：data-mode="dark" 直接指定，data-mode="system"（或沒設）
+   才交給 prefers-color-scheme。順序很重要 —— 明確指定的必須蓋過系統偏好。
+   ============================================================================= */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* ── 原始層：分類的色相，四套主題共用 ── */
+  --h-sight: 225;
+  --h-food: 42;
+  --h-lodging: 300;
+  --h-transport: 255;
+  --h-shopping: 350;
+  --h-ticket: 200;
+  --h-telecom: 175;
+  --h-other: 265;
+
+  /* 每個主題會覆寫這四個，決定分類色整體的濃淡 */
+  --cat-l: 0.52;
+  --cat-c: 0.13;
+  --cat-other-c: 0.015;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* ── 動畫。原本每個元件各寫各的，統一收在這裡 ── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+/* 分類色由上面的政策推導，所有主題共用這一段 */
+:root {
+  --cat-sight: oklch(var(--cat-l) var(--cat-c) var(--h-sight));
+  --cat-food: oklch(var(--cat-l) var(--cat-c) var(--h-food));
+  --cat-lodging: oklch(var(--cat-l) var(--cat-c) var(--h-lodging));
+  --cat-transport: oklch(var(--cat-l) var(--cat-c) var(--h-transport));
+  --cat-shopping: oklch(var(--cat-l) var(--cat-c) var(--h-shopping));
+  --cat-ticket: oklch(var(--cat-l) var(--cat-c) var(--h-ticket));
+  --cat-telecom: oklch(var(--cat-l) var(--cat-c) var(--h-telecom));
+  --cat-other: oklch(var(--cat-l) var(--cat-other-c) var(--h-other));
+
+  /*
+    「全程地圖」上每一天的顏色。色相平均散開好分辨，但明度與彩度沿用
+    主題的政策 —— 否則深色主題下會冒出一排刺眼的飽和色。
+  */
+  --day-1: oklch(var(--cat-l) var(--cat-c) 250);
+  --day-2: oklch(var(--cat-l) var(--cat-c) 30);
+  --day-3: oklch(var(--cat-l) var(--cat-c) 155);
+  --day-4: oklch(var(--cat-l) var(--cat-c) 300);
+  --day-5: oklch(var(--cat-l) var(--cat-c) 80);
+  --day-6: oklch(var(--cat-l) var(--cat-c) 200);
+  --day-7: oklch(var(--cat-l) var(--cat-c) 340);
+  --day-8: oklch(var(--cat-l) var(--cat-c) 120);
 }
 
+/* ── 月台 Platform ── */
+:root,
+[data-theme='platform'] {
+  --theme-font-display: var(--font-plex-sans);
+  --theme-font-numeric: var(--font-plex-mono);
+
+  --l-background: oklch(0.980 0.003 250);
+  --l-foreground: oklch(0.190 0.010 250);
+  --l-card: oklch(1 0 0);
+  --l-surface-raised: oklch(1 0 0);
+  --l-popover: oklch(1 0 0);
+  --l-primary: oklch(0.480 0.140 250);
+  --l-primary-foreground: oklch(0.990 0.005 250);
+  --l-secondary: oklch(0.955 0.005 250);
+  --l-secondary-foreground: oklch(0.280 0.020 250);
+  --l-muted: oklch(0.955 0.005 250);
+  --l-muted-foreground: oklch(0.500 0.010 250);
+  --l-accent: oklch(0.940 0.020 250);
+  --l-accent-foreground: oklch(0.280 0.040 250);
+  --l-destructive: oklch(0.550 0.200 27);
+  --l-success: oklch(0.550 0.130 155);
+  --l-warning: oklch(0.700 0.150 75);
+  --l-border: oklch(0.900 0.006 250);
+  --l-input: oklch(0.900 0.006 250);
+  --l-ring: oklch(0.480 0.140 250);
+  --l-cat-l: 0.52;
+  --l-cat-c: 0.14;
+  --l-cat-other-c: 0.015;
+
+  --d-background: oklch(0.170 0.012 250);
+  --d-foreground: oklch(0.960 0.004 250);
+  --d-card: oklch(0.220 0.012 250);
+  --d-surface-raised: oklch(0.250 0.012 250);
+  --d-popover: oklch(0.235 0.012 250);
+  --d-primary: oklch(0.720 0.130 250);
+  --d-primary-foreground: oklch(0.160 0.030 250);
+  --d-secondary: oklch(0.275 0.012 250);
+  --d-secondary-foreground: oklch(0.930 0.006 250);
+  --d-muted: oklch(0.275 0.012 250);
+  --d-muted-foreground: oklch(0.660 0.012 250);
+  --d-accent: oklch(0.310 0.030 250);
+  --d-accent-foreground: oklch(0.920 0.020 250);
+  --d-destructive: oklch(0.680 0.180 25);
+  --d-success: oklch(0.700 0.140 155);
+  --d-warning: oklch(0.800 0.150 75);
+  --d-border: oklch(0.300 0.012 250);
+  --d-input: oklch(0.330 0.012 250);
+  --d-ring: oklch(0.720 0.130 250);
+  --d-cat-l: 0.74;
+  --d-cat-c: 0.13;
+  --d-cat-other-c: 0.015;
+}
+
+/* ── 紙圖 Cartography ── */
+[data-theme='cartography'] {
+  --theme-font-display: var(--font-spectral);
+  --theme-font-numeric: var(--font-plex-mono);
+  --h-food: 55;
+  --h-ticket: 175;
+  --h-sight: 195;
+
+  --l-background: oklch(0.975 0.008 95);
+  --l-foreground: oklch(0.240 0.020 160);
+  --l-card: oklch(1 0.004 95);
+  --l-surface-raised: oklch(1 0.004 95);
+  --l-popover: oklch(0.995 0.004 95);
+  --l-primary: oklch(0.450 0.130 32);
+  --l-primary-foreground: oklch(0.990 0.005 95);
+  --l-secondary: oklch(0.945 0.010 100);
+  --l-secondary-foreground: oklch(0.300 0.020 150);
+  --l-muted: oklch(0.945 0.010 100);
+  --l-muted-foreground: oklch(0.520 0.015 150);
+  --l-accent: oklch(0.925 0.025 85);
+  --l-accent-foreground: oklch(0.320 0.050 60);
+  --l-destructive: oklch(0.500 0.170 28);
+  --l-success: oklch(0.500 0.100 150);
+  --l-warning: oklch(0.680 0.110 78);
+  --l-border: oklch(0.900 0.012 110);
+  --l-input: oklch(0.900 0.012 110);
+  --l-ring: oklch(0.450 0.130 32);
+  --l-cat-l: 0.50;
+  --l-cat-c: 0.085;
+  --l-cat-other-c: 0.020;
+
+  --d-background: oklch(0.200 0.015 160);
+  --d-foreground: oklch(0.940 0.010 95);
+  --d-card: oklch(0.250 0.015 160);
+  --d-surface-raised: oklch(0.280 0.015 160);
+  --d-popover: oklch(0.265 0.015 160);
+  --d-primary: oklch(0.660 0.140 34);
+  --d-primary-foreground: oklch(0.180 0.020 34);
+  --d-secondary: oklch(0.295 0.015 160);
+  --d-secondary-foreground: oklch(0.920 0.010 95);
+  --d-muted: oklch(0.295 0.015 160);
+  --d-muted-foreground: oklch(0.680 0.015 120);
+  --d-accent: oklch(0.330 0.030 80);
+  --d-accent-foreground: oklch(0.900 0.030 85);
+  --d-destructive: oklch(0.650 0.170 28);
+  --d-success: oklch(0.680 0.110 150);
+  --d-warning: oklch(0.780 0.110 78);
+  --d-border: oklch(0.320 0.015 160);
+  --d-input: oklch(0.350 0.015 160);
+  --d-ring: oklch(0.660 0.140 34);
+  --d-cat-l: 0.72;
+  --d-cat-c: 0.090;
+  --d-cat-other-c: 0.020;
+}
+
+/* ── 潮間帶 Tideline ── */
+[data-theme='tideline'] {
+  --theme-font-display: var(--font-karla);
+  --theme-font-numeric: var(--font-karla);
+  --h-food: 35;
+  --h-ticket: 195;
+
+  --l-background: oklch(0.975 0.012 85);
+  --l-foreground: oklch(0.260 0.035 200);
+  --l-card: oklch(1 0.006 85);
+  --l-surface-raised: oklch(1 0.006 85);
+  --l-popover: oklch(0.995 0.006 85);
+  --l-primary: oklch(0.520 0.100 195);
+  --l-primary-foreground: oklch(0.990 0.005 195);
+  --l-secondary: oklch(0.945 0.014 95);
+  --l-secondary-foreground: oklch(0.320 0.040 200);
+  --l-muted: oklch(0.945 0.014 95);
+  --l-muted-foreground: oklch(0.530 0.030 200);
+  --l-accent: oklch(0.925 0.035 45);
+  --l-accent-foreground: oklch(0.350 0.080 35);
+  --l-destructive: oklch(0.540 0.180 25);
+  --l-success: oklch(0.550 0.110 165);
+  --l-warning: oklch(0.720 0.130 45);
+  --l-border: oklch(0.900 0.015 100);
+  --l-input: oklch(0.900 0.015 100);
+  --l-ring: oklch(0.520 0.100 195);
+  --l-cat-l: 0.56;
+  --l-cat-c: 0.100;
+  --l-cat-other-c: 0.020;
+
+  --d-background: oklch(0.190 0.025 210);
+  --d-foreground: oklch(0.950 0.008 85);
+  --d-card: oklch(0.240 0.025 210);
+  --d-surface-raised: oklch(0.270 0.025 210);
+  --d-popover: oklch(0.255 0.025 210);
+  --d-primary: oklch(0.700 0.110 195);
+  --d-primary-foreground: oklch(0.170 0.030 195);
+  --d-secondary: oklch(0.285 0.025 210);
+  --d-secondary-foreground: oklch(0.930 0.008 85);
+  --d-muted: oklch(0.285 0.025 210);
+  --d-muted-foreground: oklch(0.670 0.020 190);
+  --d-accent: oklch(0.330 0.050 40);
+  --d-accent-foreground: oklch(0.900 0.050 45);
+  --d-destructive: oklch(0.670 0.170 25);
+  --d-success: oklch(0.700 0.120 165);
+  --d-warning: oklch(0.790 0.130 45);
+  --d-border: oklch(0.310 0.025 210);
+  --d-input: oklch(0.340 0.025 210);
+  --d-ring: oklch(0.700 0.110 195);
+  --d-cat-l: 0.74;
+  --d-cat-c: 0.105;
+  --d-cat-other-c: 0.020;
+}
+
+/* ── 夜航 Redeye ── */
+[data-theme='redeye'] {
+  --theme-font-display: var(--font-chivo);
+  --theme-font-numeric: var(--font-chivo);
+  --h-ticket: 200;
+  --h-transport: 285;
+
+  --l-background: oklch(0.970 0.006 265);
+  --l-foreground: oklch(0.200 0.020 265);
+  --l-card: oklch(1 0 0);
+  --l-surface-raised: oklch(1 0 0);
+  --l-popover: oklch(1 0 0);
+  --l-primary: oklch(0.500 0.110 200);
+  --l-primary-foreground: oklch(0.990 0.005 200);
+  --l-secondary: oklch(0.950 0.008 265);
+  --l-secondary-foreground: oklch(0.280 0.030 265);
+  --l-muted: oklch(0.950 0.008 265);
+  --l-muted-foreground: oklch(0.520 0.015 265);
+  --l-accent: oklch(0.930 0.030 68);
+  --l-accent-foreground: oklch(0.320 0.060 55);
+  --l-destructive: oklch(0.550 0.190 25);
+  --l-success: oklch(0.550 0.130 160);
+  --l-warning: oklch(0.700 0.140 68);
+  --l-border: oklch(0.900 0.008 265);
+  --l-input: oklch(0.900 0.008 265);
+  --l-ring: oklch(0.500 0.110 200);
+  --l-cat-l: 0.54;
+  --l-cat-c: 0.120;
+  --l-cat-other-c: 0.018;
+
+  --d-background: oklch(0.160 0.020 265);
+  --d-foreground: oklch(0.950 0.008 250);
+  --d-card: oklch(0.210 0.022 265);
+  --d-surface-raised: oklch(0.245 0.022 265);
+  --d-popover: oklch(0.228 0.022 265);
+  --d-primary: oklch(0.740 0.130 195);
+  --d-primary-foreground: oklch(0.160 0.030 195);
+  --d-secondary: oklch(0.265 0.022 265);
+  --d-secondary-foreground: oklch(0.930 0.008 250);
+  --d-muted: oklch(0.265 0.022 265);
+  --d-muted-foreground: oklch(0.660 0.020 250);
+  --d-accent: oklch(0.320 0.045 68);
+  --d-accent-foreground: oklch(0.900 0.060 68);
+  --d-destructive: oklch(0.680 0.180 25);
+  --d-success: oklch(0.760 0.130 160);
+  --d-warning: oklch(0.790 0.120 68);
+  --d-border: oklch(0.290 0.022 265);
+  --d-input: oklch(0.320 0.022 265);
+  --d-ring: oklch(0.740 0.130 195);
+  --d-cat-l: 0.76;
+  --d-cat-c: 0.125;
+  --d-cat-other-c: 0.018;
+}
+
+:root {
+  --background: var(--l-background);
+  --foreground: var(--l-foreground);
+  --card: var(--l-card);
+  --surface-raised: var(--l-surface-raised);
+  --popover: var(--l-popover);
+  --primary: var(--l-primary);
+  --primary-foreground: var(--l-primary-foreground);
+  --secondary: var(--l-secondary);
+  --secondary-foreground: var(--l-secondary-foreground);
+  --muted: var(--l-muted);
+  --muted-foreground: var(--l-muted-foreground);
+  --accent: var(--l-accent);
+  --accent-foreground: var(--l-accent-foreground);
+  --destructive: var(--l-destructive);
+  --success: var(--l-success);
+  --warning: var(--l-warning);
+  --border: var(--l-border);
+  --input: var(--l-input);
+  --ring: var(--l-ring);
+  --cat-l: var(--l-cat-l);
+  --cat-c: var(--l-cat-c);
+  --cat-other-c: var(--l-cat-other-c);
+}
+
+/* 使用者明確選了深色 */
+[data-mode='dark'] {
+  --background: var(--d-background);
+  --foreground: var(--d-foreground);
+  --card: var(--d-card);
+  --surface-raised: var(--d-surface-raised);
+  --popover: var(--d-popover);
+  --primary: var(--d-primary);
+  --primary-foreground: var(--d-primary-foreground);
+  --secondary: var(--d-secondary);
+  --secondary-foreground: var(--d-secondary-foreground);
+  --muted: var(--d-muted);
+  --muted-foreground: var(--d-muted-foreground);
+  --accent: var(--d-accent);
+  --accent-foreground: var(--d-accent-foreground);
+  --destructive: var(--d-destructive);
+  --success: var(--d-success);
+  --warning: var(--d-warning);
+  --border: var(--d-border);
+  --input: var(--d-input);
+  --ring: var(--d-ring);
+  --cat-l: var(--d-cat-l);
+  --cat-c: var(--d-cat-c);
+  --cat-other-c: var(--d-cat-other-c);
+}
+
+/*
+  跟隨系統。用 :not([data-mode='light']) 而不是 [data-mode='system']，
+  這樣連「還沒設定過」（沒有 data-mode）的情況也涵蓋得到。
+*/
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode='light']) {
+  --background: var(--d-background);
+  --foreground: var(--d-foreground);
+  --card: var(--d-card);
+  --surface-raised: var(--d-surface-raised);
+  --popover: var(--d-popover);
+  --primary: var(--d-primary);
+  --primary-foreground: var(--d-primary-foreground);
+  --secondary: var(--d-secondary);
+  --secondary-foreground: var(--d-secondary-foreground);
+  --muted: var(--d-muted);
+  --muted-foreground: var(--d-muted-foreground);
+  --accent: var(--d-accent);
+  --accent-foreground: var(--d-accent-foreground);
+  --destructive: var(--d-destructive);
+  --success: var(--d-success);
+  --warning: var(--d-warning);
+  --border: var(--d-border);
+  --input: var(--d-input);
+  --ring: var(--d-ring);
+  --cat-l: var(--d-cat-l);
+  --cat-c: var(--d-cat-c);
+  --cat-other-c: var(--d-cat-other-c);
+  }
+}
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,8 +440,13 @@
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
+  /*
+    主題的拉丁字排在前面、Noto Sans TC 在後面。瀏覽器是逐字挑字體的，
+    所以數字、日期、幣別代碼會用主題那套，中文自動落回 Noto Sans TC ——
+    不必為了換皮多載一份幾百 KB 的中文字檔。
+  */
   html {
-    @apply font-sans;
+    font-family: var(--font-display);
   }
 }
 
@@ -215,7 +533,7 @@
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   background: var(--popover);
-  color: var(--popover-foreground);
+  color: var(--foreground);
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
 }
 

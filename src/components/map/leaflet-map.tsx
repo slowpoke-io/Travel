@@ -11,6 +11,7 @@ import {
   useMap,
 } from 'react-leaflet'
 
+import { useTheme } from '@/lib/use-theme'
 import { cn } from '@/lib/utils'
 
 import 'leaflet/dist/leaflet.css'
@@ -112,9 +113,13 @@ export function LeafletMap({
     [points],
   )
 
-  const isDark =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+  /*
+    圖磚要跟著 App 內選的模式，而不是系統偏好 —— 使用者可能把系統設成淺色
+    但在 App 裡選了深色。useTheme 讀的是 <html> 上實際生效的那一個，
+    而且會跟著切換即時更新。
+  */
+  const { resolved } = useTheme()
+  const isDark = resolved === 'dark'
 
   return (
     <MapContainer

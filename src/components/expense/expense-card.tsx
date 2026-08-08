@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatApprox, formatMoney } from '@/lib/currency'
+import { categoryChipStyle } from '@/lib/constants'
 import { expenseCategoryMeta } from '@/lib/expense-constants'
 import { convertedHome } from '@/lib/expense-summary'
 import { getThumbUrl } from '@/lib/image-url'
@@ -55,7 +56,7 @@ export function ExpenseCard({
     >
       <span
         className="flex size-9 shrink-0 items-center justify-center rounded-full"
-        style={{ backgroundColor: `${meta.color}1a`, color: meta.color }}
+        style={categoryChipStyle(meta.color)}
       >
         <Icon className="size-4.5" aria-hidden />
       </span>
@@ -89,7 +90,7 @@ export function ExpenseCard({
         </button>
       ) : null}
 
-      <span className="shrink-0 text-right tabular-nums">
+      <span className="font-numeric shrink-0 text-right tabular-nums">
         <span className="block text-sm font-semibold">
           {formatMoney(expense.amount, expense.currency)}
         </span>

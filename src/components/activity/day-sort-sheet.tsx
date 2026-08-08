@@ -363,7 +363,7 @@ function SortRow({
 
       <Icon
         className="size-4 shrink-0"
-        style={{ color: meta.marker }}
+        style={{ color: meta.color }}
         aria-hidden
       />
 

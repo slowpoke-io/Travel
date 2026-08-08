@@ -15,8 +15,7 @@ export type ExpenseCategoryMeta = {
   value: ExpenseCategory
   label: string
   icon: LucideIcon
-  chip: string
-  /** 圖表的顏色。用固定色碼而不是 Tailwind class —— SVG 要的是實際顏色 */
+  /** CSS 變數。inline style、SVG 圖表、地圖標記都吃得下，而且跟著主題走 */
   color: string
 }
 
@@ -31,50 +30,43 @@ export const EXPENSE_CATEGORIES: ExpenseCategoryMeta[] = [
     value: 'food',
     label: '餐飲',
     icon: UtensilsCrossed,
-    chip: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
-    color: '#ea580c',
+    color: 'var(--color-cat-food)',
   },
   {
     value: 'transport',
     label: '交通',
     icon: TrainFront,
-    chip: 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
-    color: '#475569',
+    color: 'var(--color-cat-transport)',
   },
   {
     value: 'ticket',
     label: '門票',
     icon: Ticket,
-    chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
-    color: '#0284c7',
+    color: 'var(--color-cat-ticket)',
   },
   {
     value: 'shopping',
     label: '購物',
     icon: ShoppingBag,
-    chip: 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-200',
-    color: '#db2777',
+    color: 'var(--color-cat-shopping)',
   },
   {
     value: 'lodging',
     label: '住宿',
     icon: Bed,
-    chip: 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-200',
-    color: '#7c3aed',
+    color: 'var(--color-cat-lodging)',
   },
   {
     value: 'telecom',
     label: '通訊',
     icon: Smartphone,
-    chip: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200',
-    color: '#0d9488',
+    color: 'var(--color-cat-telecom)',
   },
   {
     value: 'other',
     label: '其他',
     icon: MoreHorizontal,
-    chip: 'bg-stone-200 text-stone-800 dark:bg-stone-800 dark:text-stone-200',
-    color: '#78716c',
+    color: 'var(--color-cat-other)',
   },
 ]
 

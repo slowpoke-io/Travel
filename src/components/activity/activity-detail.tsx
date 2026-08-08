@@ -21,7 +21,7 @@ import { ImageGallery } from '@/components/image/image-gallery'
 import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { categoryMeta, tagColorClass } from '@/lib/constants'
+import { categoryChipStyle, categoryMeta, tagColorClass } from '@/lib/constants'
 
 import { getImageUrl, pickCover } from '@/lib/image-url'
 import type { ActivityWithRelations } from '@/lib/queries'
@@ -110,10 +110,8 @@ export function ActivityDetail({
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
-                  meta.chip,
-                )}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+                style={categoryChipStyle(meta.color)}
               >
                 <CategoryIcon className="size-3.5" aria-hidden />
                 {meta.label}

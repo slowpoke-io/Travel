@@ -125,21 +125,3 @@ export function sumMoney(amounts: number[], code: string): number {
   return roundTo(cents / 100, code)
 }
 
-/**
- * 把使用者輸入的字串轉成金額。
- *
- * 接受全形數字、千分位逗號、以及多餘的空白 —— 手機上很容易打到這些。
- * 回傳 null 代表不是有效的金額。
- */
-export function parseAmount(input: string, code: string): number | null {
-  const normalized = input
-    .replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
-    .replace(/[，,\s]/g, '')
-    .replace(/。/g, '.')
-  if (!normalized) return null
-  if (!/^\d*\.?\d*$/.test(normalized)) return null
-
-  const value = Number(normalized)
-  if (!Number.isFinite(value) || value < 0) return null
-  return roundTo(value, code)
-}

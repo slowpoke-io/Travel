@@ -28,7 +28,7 @@ export type ExpenseSummary = {
     home: number
     ratio: number
   }[]
-  /** 依天，照 day_index 排序；最後一筆可能是「未指定日期」 */
+  /** 依天，照 day_index 排序；最後一筆可能是沒有指定天數的「其他」 */
   byDay: {
     dayId: string | null
     dayIndex: number | null
@@ -114,7 +114,7 @@ export function buildExpenseSummary(
       }
     })
     .sort((a, b) => {
-      // 未指定日期的排到最後
+      // 沒有指定天數的排到最後
       if (a.dayIndex === null) return 1
       if (b.dayIndex === null) return -1
       return a.dayIndex - b.dayIndex

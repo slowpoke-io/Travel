@@ -111,7 +111,7 @@ export function TripMapView({
         >
           <span
             className="size-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: categoryMeta(focused.category).marker }}
+            style={{ backgroundColor: categoryMeta(focused.category).color }}
           />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">
@@ -141,7 +141,7 @@ export function TripMapView({
                     backgroundColor:
                       activity.lat === null
                         ? 'var(--muted-foreground)'
-                        : categoryMeta(activity.category).marker,
+                        : categoryMeta(activity.category).color,
                   }}
                 >
                   {index + 1}

@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useBasePath, useTripAccess } from '@/components/trip/trip-access'
-import { categoryMeta, tagColorClass } from '@/lib/constants'
+import { categoryChipStyle, categoryMeta, tagColorClass } from '@/lib/constants'
 
 import { getThumbUrl, pickCover } from '@/lib/image-url'
 import type { ActivityWithRelations } from '@/lib/queries'
@@ -105,7 +105,7 @@ export function ActivityCard({
           <div className="flex w-11 shrink-0 justify-center pt-4">
             <span
               className="flex size-7 items-center justify-center rounded-full text-xs font-bold text-white"
-              style={{ backgroundColor: meta.marker }}
+              style={{ backgroundColor: meta.color }}
               aria-label={`第 ${order} 個行程`}
             >
               {order}
@@ -131,10 +131,8 @@ export function ActivityCard({
 
               <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                 <span
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium',
-                    meta.chip,
-                  )}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium"
+                  style={categoryChipStyle(meta.color)}
                 >
                   <CategoryIcon className="size-3" aria-hidden />
                   {meta.label}
@@ -204,11 +202,13 @@ export function ActivityCard({
               ) : (
                 <span
                   className="flex size-full items-center justify-center"
-                  style={{ backgroundColor: `${meta.marker}1a` }}
+                  style={{
+                      backgroundColor: `color-mix(in oklab, ${meta.color} 12%, transparent)`,
+                    }}
                 >
                   <CategoryIcon
                     className="size-7 opacity-40"
-                    style={{ color: meta.marker }}
+                    style={{ color: meta.color }}
                     aria-hidden
                   />
                 </span>
