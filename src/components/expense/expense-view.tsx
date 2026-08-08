@@ -13,22 +13,25 @@ import {
   DayCategoryChart,
   TotalHeader,
   TripOverviewCharts,
+  type ChartDisplay,
 } from '@/components/expense/expense-stats'
 import { DayChip } from '@/components/trip/day-chip'
 import { Lightbox } from '@/components/image/lightbox'
 import { useTripAccess } from '@/components/trip/trip-access'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { formatMoney } from '@/lib/currency'
+import { currencyMeta, formatMoney, roundTo } from '@/lib/currency'
 import {
   buildExpenseSummary,
   describeTotal,
+  groupAmount,
   type MoneyTotal,
 } from '@/lib/expense-summary'
 import { dayColor } from '@/lib/constants'
 import { formatDayLabel } from '@/lib/format'
 import type { ExpenseWithImages } from '@/lib/queries'
 import { sumMoney } from '@/lib/currency'
+import { cn } from '@/lib/utils'
 import type { ImageRow, TripDayRow, TripRow } from '@/lib/supabase/database.types'
 
 const ALL = 'all'
@@ -68,6 +71,33 @@ export function ExpenseView({
     跟地圖分頁用同一組 chip，使用者不用重新學。
   */
   const [selectedDay, setSelectedDay] = useState<string>(ALL)
+
+  /*
+    圖表要用哪個幣別顯示。
+
+    內部一律以結算幣別加總（混幣時那是唯一加得起來的單位），但人在當地看的是
+    當地幣別 —— ₩12,000 有感，NT$281 沒有。所以顯示層可以切回去。
+  */
+  const [showLocal, setShowLocal] = useState(true)
+
+  /* 有設當地幣別、而且跟結算幣別不同時才需要這個切換 */
+  const canSwitchCurrency = Boolean(
+    trip.local_currency && trip.local_currency !== trip.home_currency && trip.fx_rate,
+  )
+
+  const display: ChartDisplay = useMemo(() => {
+    const home = trip.home_currency
+    if (canSwitchCurrency && showLocal) {
+      const code = trip.local_currency!
+      const rate = trip.fx_rate!
+      return {
+        currency: code,
+        amount: (group) =>
+          groupAmount(group, code, home, (h) => roundTo(h / rate, code)),
+      }
+    }
+    return { currency: home, amount: (group) => group.home }
+  }, [canSwitchCurrency, showLocal, trip.local_currency, trip.fx_rate, trip.home_currency])
 
   const visible = useMemo(
     () =>
@@ -217,12 +247,24 @@ export function ExpenseView({
             「那天買了什麼」，兩個不同的問題。
           */
           <div className="px-4 py-5">
-            <TripOverviewCharts summary={tripSummary} />
+            <CurrencyToggle
+              show={canSwitchCurrency}
+              showLocal={showLocal}
+              onChange={setShowLocal}
+              trip={trip}
+            />
+            <TripOverviewCharts summary={tripSummary} display={display} />
           </div>
         ) : (
           <>
             <div className="border-b px-4 py-5">
-              <DayCategoryChart summary={daySummary} />
+              <CurrencyToggle
+                show={canSwitchCurrency}
+                showLocal={showLocal}
+                onChange={setShowLocal}
+                trip={trip}
+              />
+              <DayCategoryChart summary={daySummary} display={display} />
             </div>
 
             {groups.length === 0 ? (
@@ -328,6 +370,57 @@ export function ExpenseView({
         />
       ) : null}
     </>
+  )
+}
+
+/**
+ * 圖表的幣別切換。
+ *
+ * 只有在「有設當地幣別、而且跟結算幣別不同」時才出現 ——
+ * 兩者相同的話這個切換沒有任何意義，多一個按鈕只會讓人猶豫。
+ */
+function CurrencyToggle({
+  show,
+  showLocal,
+  onChange,
+  trip,
+}: {
+  show: boolean
+  showLocal: boolean
+  onChange: (local: boolean) => void
+  trip: TripRow
+}) {
+  if (!show) return null
+
+  const options: [boolean, string][] = [
+    [true, trip.local_currency!],
+    [false, trip.home_currency],
+  ]
+
+  return (
+    <div className="mb-4 flex justify-end">
+      <div className="bg-muted flex rounded-lg p-0.5">
+        {options.map(([local, code]) => {
+          const active = showLocal === local
+          return (
+            <button
+              key={code}
+              type="button"
+              onClick={() => onChange(local)}
+              aria-pressed={active}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium tabular-nums transition-colors',
+                active
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground',
+              )}
+            >
+              {currencyMeta(code).symbol} {code}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

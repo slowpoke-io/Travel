@@ -2,7 +2,11 @@
 
 import { formatApprox, formatMoney } from '@/lib/currency'
 import { expenseCategoryMeta } from '@/lib/expense-constants'
-import { describeTotal, type ExpenseSummary } from '@/lib/expense-summary'
+import {
+  describeTotal,
+  type ExpenseSummary,
+  type MoneyGroup,
+} from '@/lib/expense-summary'
 import type { ExpenseCategory } from '@/lib/supabase/database.types'
 
 /**
@@ -11,11 +15,23 @@ import type { ExpenseCategory } from '@/lib/supabase/database.types'
  * 圖表刻意手刻 SVG / CSS 而不是引入 recharts 之類的套件：這麼單純的圖
  * 不值得多背 100KB 以上的 JS，而這是手機優先的 App，bundle 大小是有感的。
  *
- * 所有圖表一律用結算幣別。混幣時那是唯一加得起來的單位 ——
- * ₩ 和 NT$ 沒辦法畫在同一根長條上。
+ * 圖表內部一律以結算幣別加總 —— 混幣時那是唯一加得起來的單位，
+ * ₩ 和 NT$ 沒辦法畫在同一根長條上。顯示時再依 ChartDisplay 換算回去，
+ * 讓人可以用自己習慣的幣別讀（在韓國就是看 ₩ 比較有感）。
  *
  * 這裡不顯示總額：花費分頁上方本來就有，重複一次只是佔掉一屏。
  */
+
+/**
+ * 圖表要用哪個幣別顯示。
+ *
+ * amount() 拿到的是整組花費（含各原始幣別的精確小計），不是單一個數字 ——
+ * 這樣同幣別時可以直接用精確值，不必來回換算掉精度。
+ */
+export type ChartDisplay = {
+  currency: string
+  amount: (group: MoneyGroup) => number
+}
 
 /**
  * 「全部」看到的東西：整趟的形狀。
@@ -23,7 +39,13 @@ import type { ExpenseCategory } from '@/lib/supabase/database.types'
  * 刻意不列出所有花費 —— 三百筆就是二十幾屏的牆，沒有人會用它找東西，
  * 要看某一天的明細直接點上面的日期。這一頁回答的是「錢花去哪了」。
  */
-export function TripOverviewCharts({ summary }: { summary: ExpenseSummary }) {
+export function TripOverviewCharts({
+  summary,
+  display,
+}: {
+  summary: ExpenseSummary
+  display: ChartDisplay
+}) {
   if (summary.count === 0) return null
 
   return (
@@ -33,7 +55,7 @@ export function TripOverviewCharts({ summary }: { summary: ExpenseSummary }) {
           <h3 className="text-muted-foreground mb-2 text-xs font-medium">
             每天花費
           </h3>
-          <DailyBars summary={summary} />
+          <DailyBars summary={summary} display={display} />
         </section>
       ) : null}
 
@@ -41,16 +63,22 @@ export function TripOverviewCharts({ summary }: { summary: ExpenseSummary }) {
         <h3 className="text-muted-foreground mb-2 text-xs font-medium">
           分類佔比
         </h3>
-        <CategoryBars summary={summary} />
+        <CategoryBars summary={summary} display={display} />
       </section>
     </div>
   )
 }
 
 /** 單日看到的東西：這一天的分類組成。下面接的是那天的明細 */
-export function DayCategoryChart({ summary }: { summary: ExpenseSummary }) {
+export function DayCategoryChart({
+  summary,
+  display,
+}: {
+  summary: ExpenseSummary
+  display: ChartDisplay
+}) {
   if (summary.count === 0) return null
-  return <CategoryDonut summary={summary} />
+  return <CategoryDonut summary={summary} display={display} />
 }
 
 export function TotalHeader({
@@ -84,7 +112,13 @@ export function TotalHeader({
  * 手機寬度下圓餅圖的標籤根本放不下，只能另外做圖例，讀的人要在兩邊來回對照。
  * 橫條可以把名稱、金額、比例排在同一行，一眼掃完。
  */
-function CategoryBars({ summary }: { summary: ExpenseSummary }) {
+function CategoryBars({
+  summary,
+  display,
+}: {
+  summary: ExpenseSummary
+  display: ChartDisplay
+}) {
   return (
     <ul className="space-y-2.5">
       {summary.byCategory.map((row) => {
@@ -100,7 +134,7 @@ function CategoryBars({ summary }: { summary: ExpenseSummary }) {
               />
               <span className="min-w-0 flex-1 truncate">{meta.label}</span>
               <span className="tabular-nums">
-                {formatMoney(row.home, summary.total.homeCurrency)}
+                {formatMoney(display.amount(row), display.currency)}
               </span>
               <span className="text-muted-foreground w-9 text-right text-xs tabular-nums">
                 {Math.round(row.ratio * 100)}%
@@ -134,7 +168,13 @@ function CategoryBars({ summary }: { summary: ExpenseSummary }) {
  * 上色只會讓人以為顏色帶有額外意義。分類的組成留給單日的圓餅圖去講。
  * 用 --primary 而不是接近黑的前景色 —— 那個又重又跟整體脫節。
  */
-function DailyBars({ summary }: { summary: ExpenseSummary }) {
+function DailyBars({
+  summary,
+  display,
+}: {
+  summary: ExpenseSummary
+  display: ChartDisplay
+}) {
   const max = Math.max(...summary.byDay.map((d) => d.home), 1)
   const HEIGHT = 92
 
@@ -148,7 +188,7 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
             className="flex max-w-14 min-w-8 flex-1 flex-col items-center gap-1"
           >
             <span className="text-muted-foreground text-[10px] tabular-nums">
-              {compact(d.home)}
+              {compact(display.amount(d))}
             </span>
 
             <div
@@ -160,7 +200,7 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
               role="img"
               aria-label={`${
                 d.dayIndex === null ? '其他' : `Day ${d.dayIndex}`
-              }：${formatMoney(d.home, summary.total.homeCurrency)}`}
+              }：${formatMoney(display.amount(d), display.currency)}`}
             >
               <div className="bg-primary size-full" />
             </div>
@@ -184,7 +224,13 @@ function DailyBars({ summary }: { summary: ExpenseSummary }) {
  * 中間留空放總額：圓餅圖最常被問的就是「所以總共多少」，
  * 那個洞不放東西才是浪費。
  */
-function CategoryDonut({ summary }: { summary: ExpenseSummary }) {
+function CategoryDonut({
+  summary,
+  display,
+}: {
+  summary: ExpenseSummary
+  display: ChartDisplay
+}) {
   const R = 42
   const C = 2 * Math.PI * R
   const total = summary.total.home
@@ -235,7 +281,7 @@ function CategoryDonut({ summary }: { summary: ExpenseSummary }) {
       */}
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="text-sm font-semibold tabular-nums">
-            {formatMoney(total, summary.total.homeCurrency)}
+            {formatMoney(display.amount(summary.total), display.currency)}
           </span>
         </span>
       </div>
@@ -255,7 +301,7 @@ function CategoryDonut({ summary }: { summary: ExpenseSummary }) {
               />
               <span className="min-w-0 flex-1 truncate">{meta.label}</span>
               <span className="tabular-nums">
-                {formatMoney(row.home, summary.total.homeCurrency)}
+                {formatMoney(display.amount(row), display.currency)}
               </span>
               <span className="text-muted-foreground w-9 text-right text-xs tabular-nums">
                 {Math.round(row.ratio * 100)}%

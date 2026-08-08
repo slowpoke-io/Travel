@@ -12,6 +12,21 @@ import type {
  * 這兩個沒有共同單位，只有換算到結算幣別才加得起來。但顯示時使用者想看的是
  * 原始幣別，所以兩種都留著，由 UI 決定怎麼呈現。
  */
+export type CurrencyAmount = { currency: string; amount: number }
+
+/**
+ * 任何一組花費的金額。
+ *
+ * home 是換算到結算幣別的值（唯一能跨幣別相加的單位），byCurrency 則保留
+ * 各原始幣別的精確總額。圖表要顯示原始幣別時一定要用 byCurrency，
+ * 不能拿 home 去除以匯率倒推 —— 那是來回換算，每一筆都會掉精度，
+ * 十幾筆之後就會跟清單上的數字差個一兩塊。
+ */
+export type MoneyGroup = {
+  home: number
+  byCurrency: CurrencyAmount[]
+}
+
 export type MoneyTotal = {
   /** 換算成結算幣別的總額。混幣時唯一加得起來的數字 */
   home: number
@@ -23,17 +38,15 @@ export type MoneyTotal = {
 export type ExpenseSummary = {
   total: MoneyTotal
   /** 依分類，金額大到小。ratio 是佔總額的比例（0–1） */
-  byCategory: {
+  byCategory: (MoneyGroup & {
     category: ExpenseCategory
-    home: number
     ratio: number
-  }[]
+  })[]
   /** 依天，照 day_index 排序；最後一筆可能是沒有指定天數的「其他」 */
-  byDay: {
+  byDay: (MoneyGroup & {
     dayId: string | null
     dayIndex: number | null
     date: string | null
-    home: number
     count: number
     /**
      * 這一天各分類各花了多少，金額大到小。
@@ -41,33 +54,38 @@ export type ExpenseSummary = {
      * 而且跟分類佔比用的是同一套顏色，兩張圖才像同一個系統。
      */
     segments: { category: ExpenseCategory; home: number }[]
-  }[]
+  })[]
   count: number
 }
 
-function buildTotal(rows: ExpenseRow[], homeCurrency: string): MoneyTotal {
+/** 一組花費依原始幣別的小計，金額大到小 */
+function splitByCurrency(rows: ExpenseRow[]): CurrencyAmount[] {
   const perCurrency = new Map<string, number[]>()
   for (const row of rows) {
     const list = perCurrency.get(row.currency)
     if (list) list.push(row.amount)
     else perCurrency.set(row.currency, [row.amount])
   }
-
-  const byCurrency = [...perCurrency]
+  return [...perCurrency]
     .map(([currency, amounts]) => ({
       currency,
       amount: sumMoney(amounts, currency),
     }))
     .sort((a, b) => b.amount - a.amount)
+}
 
+function toGroup(rows: ExpenseRow[], homeCurrency: string): MoneyGroup {
   return {
     home: sumMoney(
       rows.map((r) => r.amount_home),
       homeCurrency,
     ),
-    homeCurrency,
-    byCurrency,
+    byCurrency: splitByCurrency(rows),
   }
+}
+
+function buildTotal(rows: ExpenseRow[], homeCurrency: string): MoneyTotal {
+  return { ...toGroup(rows, homeCurrency), homeCurrency }
 }
 
 export function buildExpenseSummary(
@@ -78,20 +96,20 @@ export function buildExpenseSummary(
   const total = buildTotal(expenses, homeCurrency)
 
   // ---- 分類 ----
-  const perCategory = new Map<ExpenseCategory, number[]>()
+  const perCategory = new Map<ExpenseCategory, ExpenseRow[]>()
   for (const e of expenses) {
     const list = perCategory.get(e.category)
-    if (list) list.push(e.amount_home)
-    else perCategory.set(e.category, [e.amount_home])
+    if (list) list.push(e)
+    else perCategory.set(e.category, [e])
   }
   const byCategory = [...perCategory]
-    .map(([category, amounts]) => {
-      const home = sumMoney(amounts, homeCurrency)
+    .map(([category, rows]) => {
+      const group = toGroup(rows, homeCurrency)
       return {
         category,
-        home,
+        ...group,
         // 總額是 0 時（全部都是 0 元）比例一律給 0，不要除以零
-        ratio: total.home > 0 ? home / total.home : 0,
+        ratio: total.home > 0 ? group.home / total.home : 0,
       }
     })
     .sort((a, b) => b.home - a.home)
@@ -120,10 +138,7 @@ export function buildExpenseSummary(
         dayId,
         dayIndex: day?.day_index ?? null,
         date: day?.date ?? null,
-        home: sumMoney(
-          rows.map((r) => r.amount_home),
-          homeCurrency,
-        ),
+        ...toGroup(rows, homeCurrency),
         count: rows.length,
         segments: [...perCat]
           .map(([category, amounts]) => ({
@@ -180,6 +195,27 @@ export function describeTotal(total: MoneyTotal): {
       approx: false,
     })),
   }
+}
+
+/**
+ * 這一組要顯示的金額。
+ *
+ * 如果它整組都是同一個原始幣別、而且正好就是要顯示的幣別，直接用精確的
+ * 原始總額；否則才用結算幣別的值去換算。
+ *
+ * 這一步不能省：來回換算（原幣 → 結算 → 原幣）每筆都會掉精度，
+ * 十幾筆之後圓餅中間就會跟下面清單的日期小計差個一兩塊，看起來像 bug。
+ */
+export function groupAmount(
+  group: MoneyGroup,
+  displayCurrency: string,
+  homeCurrency: string,
+  convert: (home: number) => number,
+): number {
+  if (displayCurrency === homeCurrency) return group.home
+  const only = group.byCurrency.length === 1 ? group.byCurrency[0] : null
+  if (only && only.currency === displayCurrency) return only.amount
+  return convert(group.home)
 }
 
 /** 單筆花費的換算補充。已經是結算幣別時不需要補充 */
