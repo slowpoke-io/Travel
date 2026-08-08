@@ -36,14 +36,19 @@ export function GoogleTripMap({
 }) {
   const state = useGoogleMaps(true)
   const { resolved } = useTheme()
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<google.maps.Map | null>(null)
-
   /*
-    地圖重建過幾次。標記那個 effect 要跟著重跑 ——
-    重建之後舊的標記掛在已經被丟掉的地圖上，不重畫的話畫面上就空了。
+    容器用 state 而不是 ref。
+
+    這一段是為了修「換日期後地圖有時空白」：某一天沒有任何含座標的行程時，
+    元件會提早 return 空狀態，容器整個從 DOM 消失；再切回有座標的那天時，
+    容器是一個「全新的」節點，但建立地圖的 effect 只依賴 [state, resolved]，
+    不會重跑 —— mapRef 還指著掛在已經消失的節點上的舊地圖，於是畫面全白。
+
+    改成 state 之後，容器掛上／卸下都會讓下面的 effect 重跑，
+    地圖跟著重建，也順便把舊的清乾淨。
   */
-  const [mapVersion, setMapVersion] = useState(0)
+  const [container, setContainer] = useState<HTMLDivElement | null>(null)
+  const mapRef = useRef<google.maps.Map | null>(null)
 
   // 建立地圖時要用的初始中心。放 ref 才不會讓 points 一變就重建地圖
   const pointsRef = useRef(points)
@@ -65,7 +70,6 @@ export function GoogleTripMap({
     舊的 styles 陣列就會被忽略，所以深色只能走 colorScheme 這條路。
   */
   useEffect(() => {
-    const container = containerRef.current
     if (state !== 'ready' || !container) return
 
     // Google 沒有 destroy()，清空容器再重建是官方認可的作法
@@ -81,8 +85,12 @@ export function GoogleTripMap({
       disableDefaultUI: true,
       zoomControl: true,
     })
-    setMapVersion((v) => v + 1)
-  }, [state, resolved])
+
+    return () => {
+      mapRef.current = null
+      container.replaceChildren()
+    }
+  }, [state, resolved, container])
 
   // 標記與路線：points 變動時整批重建，數量少（一趟旅遊幾十個）不需要做差異更新
   useEffect(() => {
@@ -147,7 +155,11 @@ export function GoogleTripMap({
       for (const m of markers) m.map = null
       polyline?.setMap(null)
     }
-  }, [state, points, selectedId, showRoute, mapVersion, resolved])
+    /*
+      container 與 resolved 就是「地圖被重建了」的兩個條件，直接放進相依。
+      重建之後舊標記掛在已經丟掉的地圖上，不重畫畫面就是空的。
+    */
+  }, [state, points, selectedId, showRoute, resolved, container])
 
   // 沒有任何有座標的行程時，底下會用 points[0] 當中心而炸掉
   if (points.length === 0) {
@@ -180,7 +192,7 @@ export function GoogleTripMap({
 
   return (
     <div className={cn('relative overflow-hidden', className)}>
-      <div ref={containerRef} className="size-full" />
+      <div ref={setContainer} className="size-full" />
       {state !== 'ready' ? (
         <div className="bg-muted absolute inset-0 animate-pulse" />
       ) : null}
