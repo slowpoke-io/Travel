@@ -198,14 +198,21 @@ function Body({
             <CurrencyRow currency={currency} onChange={setCurrency} trip={trip} />
           </div>
 
-          <div className="relative">
+          {/*
+            幣別符號用真正的前綴，不要絕對定位疊在輸入框上。
+
+            疊上去的話左側留白得寫死，而符號的寬度差很多 ——「₩」一個字元放得下，
+            「NT$」「HK$」「CHF」就會被打進去的數字蓋掉。用 flex 讓它自己佔位，
+            多寬都不會撞到。
+          */}
+          <div className="border-input focus-within:border-ring focus-within:ring-ring/50 dark:bg-input/30 flex h-14 items-center gap-2 rounded-lg border bg-transparent px-3 transition-colors focus-within:ring-3">
             <span
-              className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 flex items-center text-lg"
+              className="text-muted-foreground shrink-0 text-lg"
               aria-hidden
             >
               {symbol}
             </span>
-            <Input
+            <input
               id="expense-amount"
               /*
                 inputMode="decimal" 讓手機直接跳出數字鍵盤，但它仍是一般的
@@ -217,7 +224,7 @@ function Body({
               value={amount}
               onChange={(e) => setAmount(sanitize(e.target.value, currency))}
               placeholder="0"
-              className="h-14 pl-9 text-2xl font-semibold tabular-nums"
+              className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-2xl font-semibold tabular-nums outline-none"
             />
           </div>
 
