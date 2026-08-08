@@ -35,6 +35,12 @@ export type ExpenseSummary = {
     date: string | null
     home: number
     count: number
+    /**
+     * 這一天各分類各花了多少，金額大到小。
+     * 讓每天的長條可以依分類堆疊 —— 同時看得出「哪天花最多」與「花在什麼上」，
+     * 而且跟分類佔比用的是同一套顏色，兩張圖才像同一個系統。
+     */
+    segments: { category: ExpenseCategory; home: number }[]
   }[]
   count: number
 }
@@ -102,6 +108,14 @@ export function buildExpenseSummary(
   const byDay = [...perDay]
     .map(([dayId, rows]) => {
       const day = dayId ? dayById.get(dayId) : undefined
+
+      const perCat = new Map<ExpenseCategory, number[]>()
+      for (const r of rows) {
+        const list = perCat.get(r.category)
+        if (list) list.push(r.amount_home)
+        else perCat.set(r.category, [r.amount_home])
+      }
+
       return {
         dayId,
         dayIndex: day?.day_index ?? null,
@@ -111,6 +125,12 @@ export function buildExpenseSummary(
           homeCurrency,
         ),
         count: rows.length,
+        segments: [...perCat]
+          .map(([category, amounts]) => ({
+            category,
+            home: sumMoney(amounts, homeCurrency),
+          }))
+          .sort((a, b) => b.home - a.home),
       }
     })
     .sort((a, b) => {

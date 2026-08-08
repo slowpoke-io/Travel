@@ -115,7 +115,7 @@ export function CurrencySettings({ trip }: { trip: TripRow }) {
                 但沒有人記得 0.0234；大家記得的是「1 塊台幣大概 43 韓元」。
                 用這個角度才檢查得出來匯率有沒有打錯。
               */
-              <p className="text-muted-foreground text-xs tabular-nums">
+              <p className="text-muted-foreground mb-1.5 text-xs tabular-nums">
                 {formatMoney(1, home)} ≈ {formatInverseRate(rateValue, local)}
               </p>
             ) : (
@@ -132,7 +132,9 @@ export function CurrencySettings({ trip }: { trip: TripRow }) {
         disabled={pending || !dirty || (needsRate && !rateValid)}
         className="w-full gap-2"
       >
-        {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : null}
         儲存幣別設定
       </Button>
     </div>

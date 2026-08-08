@@ -10,13 +10,13 @@ import {
   type MappedActivity,
 } from '@/components/map/activity-map'
 import { GoogleTripMap } from '@/components/map/google-trip-map'
+import { DayChip } from '@/components/trip/day-chip'
 import { useBasePath } from '@/components/trip/trip-access'
 import { isPlaceSearchEnabled } from '@/lib/env'
 import { categoryMeta, dayColor } from '@/lib/constants'
 import { formatDayLabel } from '@/lib/format'
 import type { ActivityWithRelations } from '@/lib/queries'
 import type { TripDayRow } from '@/lib/supabase/database.types'
-import { cn } from '@/lib/utils'
 
 const ALL = 'all'
 
@@ -169,39 +169,3 @@ export function TripMapView({
   )
 }
 
-function DayChip({
-  active,
-  onClick,
-  label,
-  sub,
-  color,
-}: {
-  active: boolean
-  onClick: () => void
-  label: string
-  sub?: string
-  color?: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        'flex min-w-14 flex-col items-center rounded-lg px-2.5 py-1.5 text-center transition-colors',
-        active ? 'bg-primary text-primary-foreground' : 'bg-muted',
-      )}
-    >
-      <span className="flex items-center gap-1 text-xs font-semibold">
-        {color ? (
-          <span
-            className="size-2 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-        ) : null}
-        {label}
-      </span>
-      {sub ? <span className="text-[10px] opacity-75">{sub}</span> : null}
-    </button>
-  )
-}

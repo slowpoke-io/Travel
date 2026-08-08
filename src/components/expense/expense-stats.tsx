@@ -71,8 +71,6 @@ export function TotalHeader({
  * 橫條可以把名稱、金額、比例排在同一行，一眼掃完。
  */
 function CategoryBars({ summary }: { summary: ExpenseSummary }) {
-  const max = Math.max(...summary.byCategory.map((c) => c.home), 1)
-
   return (
     <ul className="space-y-2.5">
       {summary.byCategory.map((row) => {
@@ -94,11 +92,16 @@ function CategoryBars({ summary }: { summary: ExpenseSummary }) {
                 {Math.round(row.ratio * 100)}%
               </span>
             </div>
-            <div className="bg-muted h-2 overflow-hidden rounded-full">
+            <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+              {/*
+                寬度用「佔總額的比例」而不是「佔最大值的比例」。
+                除以最大值的話，最大的那個分類永遠是滿版 —— 標著 79% 卻畫成
+                100%，跟旁邊自己的數字對不起來。
+              */}
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${(row.home / max) * 100}%`,
+                  width: `${Math.max(row.ratio * 100, 1.5)}%`,
                   backgroundColor: meta.color,
                 }}
               />
@@ -110,31 +113,58 @@ function CategoryBars({ summary }: { summary: ExpenseSummary }) {
   )
 }
 
+/**
+ * 每天花費。
+ *
+ * 長條依分類堆疊，而不是單一顏色的實心塊 —— 同時看得出「哪天花最多」與
+ * 「花在什麼上」，而且跟上面的分類佔比共用同一套顏色，兩張圖才像同一個系統。
+ * 原本是近黑色的粗塊，又重又跟旁邊的彩色完全脫節。
+ */
 function DailyBars({ summary }: { summary: ExpenseSummary }) {
   const max = Math.max(...summary.byDay.map((d) => d.home), 1)
+  const HEIGHT = 92
 
   return (
-    <div className="flex items-end gap-1.5 overflow-x-auto pb-1">
-      {summary.byDay.map((d) => (
-        <div
-          key={d.dayId ?? 'none'}
-          className="flex min-w-9 flex-1 flex-col items-center gap-1"
-        >
-          <span className="text-muted-foreground text-[10px] tabular-nums">
-            {compact(d.home)}
-          </span>
+    <div className="no-scrollbar overflow-x-auto">
+      <div className="flex min-w-full items-end gap-2">
+        {summary.byDay.map((d) => (
           <div
-            className="bg-foreground/80 w-full rounded-t"
-            style={{
-              /* 最矮也留 3px，否則金額很小的那天會整根消失 */
-              height: `${Math.max((d.home / max) * 96, 3)}px`,
-            }}
-          />
-          <span className="text-muted-foreground text-[10px]">
-            {d.dayIndex === null ? '其他' : `D${d.dayIndex}`}
-          </span>
-        </div>
-      ))}
+            key={d.dayId ?? 'none'}
+            /* 天數少時不要讓長條變成一整片色塊，所以給上限 */
+            className="flex max-w-14 min-w-8 flex-1 flex-col items-center gap-1"
+          >
+            <span className="text-muted-foreground text-[10px] tabular-nums">
+              {compact(d.home)}
+            </span>
+
+            <div
+              className="flex w-full flex-col-reverse overflow-hidden rounded-sm"
+              style={{
+                /* 最矮也留 3px，否則金額很小的那天會整根消失 */
+                height: `${Math.max((d.home / max) * HEIGHT, 3)}px`,
+              }}
+              role="img"
+              aria-label={`${
+                d.dayIndex === null ? '其他' : `Day ${d.dayIndex}`
+              }：${formatMoney(d.home, summary.total.homeCurrency)}`}
+            >
+              {d.segments.map((seg) => (
+                <div
+                  key={seg.category}
+                  style={{
+                    flexGrow: seg.home,
+                    backgroundColor: expenseCategoryMeta(seg.category).color,
+                  }}
+                />
+              ))}
+            </div>
+
+            <span className="text-muted-foreground border-border w-full border-t pt-1 text-center text-[10px]">
+              {d.dayIndex === null ? '其他' : `D${d.dayIndex}`}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -448,6 +448,18 @@
     padding-bottom: calc(3.5rem + max(env(safe-area-inset-bottom), 0.5rem));
   }
 
+  /*
+   * 黏在頂部標題列「正下方」的元素（例如花費清單的日期標頭）。
+   *
+   * 直接用 top-0 的話會黏在視窗頂端，但那裡已經被標題列（sticky、z-20、
+   * 不透明）蓋住了，看起來就像完全沒有生效。
+   * 標題列的高度是 size-9 的按鈕（2.25rem）加上 py-2.5（0.625rem × 2），
+   * 再加上瀏海的安全區。
+   */
+  .top-app-header {
+    top: calc(3.5rem + env(safe-area-inset-top));
+  }
+
   /* 浮在導覽列正上方的元素（FAB、批次操作列） */
   .bottom-above-nav {
     bottom: calc(3.5rem + max(env(safe-area-inset-bottom), 0.5rem));

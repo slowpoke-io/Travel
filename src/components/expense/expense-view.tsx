@@ -10,6 +10,7 @@ import { deleteImage } from '@/actions/owner/images'
 import { ExpenseCard } from '@/components/expense/expense-card'
 import { ExpenseFormSheet } from '@/components/expense/expense-form-sheet'
 import { ExpenseStats, TotalHeader } from '@/components/expense/expense-stats'
+import { DayChip } from '@/components/trip/day-chip'
 import { Lightbox } from '@/components/image/lightbox'
 import { useTripAccess } from '@/components/trip/trip-access'
 import { Button } from '@/components/ui/button'
@@ -20,10 +21,15 @@ import {
   describeTotal,
   type MoneyTotal,
 } from '@/lib/expense-summary'
+import { dayColor } from '@/lib/constants'
 import { formatDayLabel } from '@/lib/format'
 import type { ExpenseWithImages } from '@/lib/queries'
 import { sumMoney } from '@/lib/currency'
 import type { ImageRow, TripDayRow, TripRow } from '@/lib/supabase/database.types'
+
+const ALL = 'all'
+/** 沒有指定天數的那一組。用固定字串當 key，才能跟真的 day id 一起放在同一個狀態裡 */
+const NONE = 'none'
 
 export function ExpenseView({
   trip,
@@ -52,15 +58,45 @@ export function ExpenseView({
   const [deletingImage, startDeletingImage] = useTransition()
   const [showStats, setShowStats] = useState(false)
 
+  /*
+    看哪一天。'all' 是全部。
+
+    一趟七天、每天八筆就有五十幾列，全部攤開要捲很久，而且找不到特定的一天。
+    跟地圖分頁用同一組 chip，使用者不用重新學。
+  */
+  const [selectedDay, setSelectedDay] = useState<string>(ALL)
+
+  const visible = useMemo(
+    () =>
+      selectedDay === ALL
+        ? expenses
+        : expenses.filter((e) => (e.day_id ?? NONE) === selectedDay),
+    [expenses, selectedDay],
+  )
+
+  /*
+    統計一律看整趟，不跟著所選的那天走 —— 分類佔比與每天花費本來就是
+    「整趟的形狀」，跟著過濾就沒有意義了。
+  */
   const summary = useMemo(
     () => buildExpenseSummary(expenses, days, trip.home_currency),
     [expenses, days, trip.home_currency],
   )
 
+  /** 每個 chip 上要顯示的筆數 */
+  const countByDay = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const e of expenses) {
+      const key = e.day_id ?? NONE
+      m[key] = (m[key] ?? 0) + 1
+    }
+    return m
+  }, [expenses])
+
   /* 依天分組。沒有指定天數的歸「其他」，排在最後 */
   const groups = useMemo(() => {
     const byDay = new Map<string | null, ExpenseWithImages[]>()
-    for (const e of expenses) {
+    for (const e of visible) {
       const list = byDay.get(e.day_id)
       if (list) list.push(e)
       else byDay.set(e.day_id, [e])
@@ -81,7 +117,7 @@ export function ExpenseView({
         if (!b.day) return -1
         return a.day.day_index - b.day.day_index
       })
-  }, [expenses, days, trip.home_currency])
+  }, [visible, days, trip.home_currency])
 
   async function remove() {
     if (!confirmDelete) return false
@@ -152,13 +188,53 @@ export function ExpenseView({
         ) : null}
       </div>
 
+      {/* 只有一天以上才需要切換 */}
+      {expenses.length > 0 && days.length > 1 ? (
+        <div className="no-scrollbar overflow-x-auto border-b">
+          <div className="flex w-max gap-1.5 px-4 py-2">
+            <DayChip
+              active={selectedDay === ALL}
+              onClick={() => setSelectedDay(ALL)}
+              label="全部"
+              sub={`${expenses.length} 筆`}
+            />
+            {days.map((day) => (
+              <DayChip
+                key={day.id}
+                active={selectedDay === day.id}
+                onClick={() => setSelectedDay(day.id)}
+                label={`D${day.day_index}`}
+                sub={`${countByDay[day.id] ?? 0} 筆`}
+                color={dayColor(day.day_index)}
+              />
+            ))}
+            {countByDay[NONE] ? (
+              <DayChip
+                active={selectedDay === NONE}
+                onClick={() => setSelectedDay(NONE)}
+                label="其他"
+                sub={`${countByDay[NONE]} 筆`}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <main className="pb-24">
         {expenses.length === 0 ? (
           <EmptyExpenses canEdit={canEdit} onAdd={startAdd} />
+        ) : groups.length === 0 ? (
+          <p className="text-muted-foreground py-16 text-center text-sm">
+            這一天還沒有花費
+          </p>
         ) : (
           groups.map((group) => (
             <section key={group.dayId ?? 'none'}>
-              <header className="bg-muted/40 flex items-baseline justify-between px-4 py-1.5">
+              {/*
+                黏在標題列正下方。清單長的時候，捲到一半要知道現在看的是哪一天。
+                不能用 top-0 —— 那會被 sticky 的標題列蓋住。
+              */}
+              <header className="bg-muted/95 supports-backdrop-filter:bg-muted/75 top-app-header sticky z-10 flex items-baseline justify-between px-4 py-1.5 backdrop-blur">
                 <h2 className="text-xs font-medium">
                   {group.day
                     ? `Day ${group.day.day_index}${
